@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Skill 运行时工作数据（逐次分析产出，不入库）
+**/runs/
