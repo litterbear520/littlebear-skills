@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧸 Littlebear Skills
+# Littlebear Skills
 
 **把口语需求变成可复现产物的 Agent Skills 合集**
 
@@ -69,7 +69,9 @@ Copy-Item -Recurse littlebear-skills\worldcup-bet-advisor "$HOME\.claude\skills\
 - **复盘驱动进化**——每次先做赛后复盘，沉淀「哪个模型 / 哪类信号更准」，下次回灌，越打越准
 
 **触发**：问「今天这几场买哪个」「怎么串」「比分推荐」「玩法建议」「倍率」等；仅查赛程 / 看比分 / 积分榜不触发。
+
 **依赖**：Python 3（标准库）+ [web-access](https://github.com/eze-is/web-access)。
+
 **了解更多**：[SKILL.md](./worldcup-bet-advisor/SKILL.md) · [决策口径 playbook.md](./worldcup-bet-advisor/references/playbook.md)
 
 > 产出不构成投注建议，理性娱乐、量力而行。
@@ -83,7 +85,9 @@ Copy-Item -Recurse littlebear-skills\worldcup-bet-advisor "$HOME\.claude\skills\
 - 报告含 5 个分析维度 + 学习建议 + **可点开看 BOSS 原文的岗位卡片墙**（搜索 / 经验学历筛选 / 薪资排序）
 
 **触发**：同时提到 BOSS / zhipin 和某类岗位，想了解要求、薪资、技术栈、市场行情、求职准备方向等。
+
 **依赖**：Python 3（标准库）+ [web-access](https://github.com/eze-is/web-access)（硬依赖——BOSS 反爬强，必须走它的 CDP）。
+
 **了解更多**：[SKILL.md](./boss-job-analyzer/SKILL.md) · [抓取口径 zhipin-site-notes.md](./boss-job-analyzer/references/zhipin-site-notes.md)
 
 > 复用合法登录态、像人一样浏览，请遵守站点条款、合理控制抓取频率。
