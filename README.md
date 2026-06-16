@@ -19,7 +19,18 @@
 
 ## 📦 安装方式
 
-### 方式一：让 Claude 帮你装（推荐）
+这些技能用标准的 [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills)（`SKILL.md`）格式，**与具体工具无关**——Claude Code / Cursor / Codex / OpenCode 等都能用。三选一：
+
+### 方式一：`npx skills`（跨工具一键，推荐）
+
+[`npx skills`](https://github.com/vercel-labs/skills) 是开放的 Agent Skills 安装器，支持 Claude Code、Cursor、Codex 等 70+ 种 agent，会自动放到**你当前工具**对应的 skills 目录：
+
+```bash
+# 交互式向导会列出本仓库里的技能（worldcup-bet-advisor 等）让你勾选
+npx skills add litterbear520/littlebear-skills
+```
+
+### 方式二：让 Claude 帮你装
 
 在 Claude Code 里直接说：
 
@@ -29,13 +40,13 @@
 
 Claude 会把对应技能目录拉到本地并放进 `~/.claude/skills/`，下次触发即可用。
 
-### 方式二：手动安装
+### 方式三：手动安装
 
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/litterbear520/littlebear-skills.git
 
-# 2. 把想要的技能目录复制到 Claude 的 skills 目录
+# 2. 把想要的技能目录复制到对应工具的 skills 目录，例如 Claude Code：
 #    macOS / Linux
 cp -r littlebear-skills/worldcup-bet-advisor ~/.claude/skills/
 
@@ -43,7 +54,7 @@ cp -r littlebear-skills/worldcup-bet-advisor ~/.claude/skills/
 Copy-Item -Recurse littlebear-skills\worldcup-bet-advisor "$HOME\.claude\skills\"
 ```
 
-复制完成后重启会话，对 Claude 描述需求即可自动触发对应技能。
+> Cursor / Codex 等的技能目录与 Claude Code 不同，推荐用**方式一**让 `npx skills` 自动放对位置。复制完成后重启会话，对 Agent 描述需求即可自动触发对应技能。
 
 ---
 
@@ -68,8 +79,14 @@ Copy-Item -Recurse littlebear-skills\worldcup-bet-advisor "$HOME\.claude\skills\
 
 **前置要求**
 
-- Python 3（运行抓取/合并/出报告的脚本）
-- 浏览器环境用于打开报告（依赖 web-access skill 的 CDP，或 chrome-devtools MCP）
+- Python 3（运行抓取/合并/出报告的脚本）——仅用标准库，无需 `pip install`
+- **[web-access](https://github.com/eze-is/web-access) 技能**：用它的 CDP 把报告开到你**日常的 Chrome**（直连被反爬阻断时也用它兜底抓数据）。跨工具一键装：
+
+  ```bash
+  npx skills add eze-is/web-access
+  ```
+
+  没装也行——触发技能时它会先问你要不要装。
 
 **了解更多**：[SKILL.md](./worldcup-bet-advisor/SKILL.md) ｜ 决策口径见 [playbook.md](./worldcup-bet-advisor/references/playbook.md)
 
