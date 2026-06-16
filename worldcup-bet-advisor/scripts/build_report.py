@@ -332,10 +332,10 @@ def render_match(idx, m, a, value_labels):
 
 
 # ---------- 方案卡 ----------
-def leg_line(l):
+def leg_line(l, show_conf=True):
     mt = esc(l.get("match", l.get("match_id", "")))
     conf = (f'<span class="leg-conf">{conf_dots(l.get("confidence"))}</span>'
-            if l.get("confidence") is not None else "")
+            if show_conf and l.get("confidence") is not None else "")
     reason = f'<div class="leg-r">{esc(l.get("reason"))}</div>' if l.get("reason") else ""
     return (f'<div class="leg">'
             f'<div class="leg-top"><span class="leg-p">{esc(l.get("play"))}</span>'
@@ -344,61 +344,84 @@ def leg_line(l):
             f'{reason}</div>')
 
 
-def plan_card(num, label, title, sub, body, accent):
-    # h3 用策略句；若 title 以 "档位名 · " 开头则剥掉前缀，避免与 eyebrow 里的档位名重复
-    heading = title
+def _plan_heading(title, label):
+    # 策略句去掉 "档位名 · " 前缀，避免与标签里的档位名重复
     for sep in (" · ", " ·", "· ", "·", " - ", " | "):
         pre = label + sep
         if title.startswith(pre):
-            heading = title[len(pre):]
-            break
-    return f'''<div class="plan {accent}">
-      <div class="plan-h"><span class="plan-badge">{esc(num)}</span>
-        <div class="plan-h-txt"><span class="plan-k">{esc(label)}</span><h3>{esc(heading)}</h3></div></div>
-      <p class="plan-sub">{esc(sub)}</p>
-      <div class="plan-body">
-        <div class="plan-clip">{body}</div>
-        <div class="plan-fade" aria-hidden="true"></div>
-        <button class="plan-more" type="button"><span class="pm-t">展开更多</span><span class="pm-i" aria-hidden="true"></span></button>
-      </div>
-    </div>'''
+            return title[len(pre):]
+    return title
+
+
+def _legs_grid(blocks):
+    # blocks: [(group_header|None, combo|None, [legs], parlay_note|None, show_conf), ...]
+    # 串关腿不显示单腿信心点（整串才是风险单位）；单关/底仓显示。
+    html = ""
+    for gh, combo, legs, pnote, show_conf in blocks:
+        if gh is not None:
+            co = f'<span class="combo">合计 @{combo}</span>' if combo else ""
+            html += f'<div class="tp-gh">{esc(gh)}{co}</div>'
+        html += "".join(leg_line(l, show_conf) for l in legs)
+        if pnote:
+            html += f'<div class="leg-r tp-pnote">{esc(pnote)}</div>'
+    return f'<div class="tp-legs">{html}</div>'
 
 
 def render_plans(plans):
     if not plans:
         return ""
-    cards = ""
+    # 三档收成一组 Tabs：一次聚焦一档，选中档独占全宽面板（PDF 导出时三档全展开）
+    tiers = []  # (num, name, hint, accent, title, sub, body_html, note)
+
     st = plans.get("steady")
     if st:
-        legs = "".join(leg_line(l) for l in st.get("legs", []))
-        body = f'<div class="legs">{legs}</div>' + (f'<p class="plan-note">{esc(st.get("note"))}</p>' if st.get("note") else "")
-        cards += plan_card("01", "稳健", st.get("title", "稳健单关"), st.get("sub", "高把握、求命中率"), body, "calm")
+        body = _legs_grid([(None, None, st.get("legs", []), None, True)])
+        tiers.append(("01", "稳健", "只认共识腿", "calm",
+                      st.get("title", "稳健单关"), st.get("sub", "高把握、求命中率"),
+                      body, st.get("note")))
+
     ba = plans.get("balanced")
     if ba:
-        body = ""
+        blocks = []
         if ba.get("singles"):
-            body += '<div class="sub-l">核心单关</div><div class="legs">' + "".join(leg_line(l) for l in ba["singles"]) + "</div>"
+            blocks.append(("核心单关", None, ba["singles"], None, True))
         pl = ba.get("parlay")
         if pl and pl.get("legs"):
-            co = parlay_odds(pl["legs"])
-            body += f'<div class="sub-l">小串 <span class="combo">合计 @{co}</span></div><div class="legs">' + "".join(leg_line(l) for l in pl["legs"]) + "</div>"
-        if ba.get("note"):
-            body += f'<p class="plan-note">{esc(ba["note"])}</p>'
-        cards += plan_card("02", "平衡", ba.get("title", "单关 + 小串"), ba.get("sub", "命中与回报兼顾"), body, "mid")
+            blocks.append(("小串", parlay_odds(pl["legs"]), pl["legs"], pl.get("note"), False))
+        tiers.append(("02", "平衡", "底仓 + 小串", "mid",
+                      ba.get("title", "单关 + 小串"), ba.get("sub", "命中与回报兼顾"),
+                      _legs_grid(blocks), ba.get("note")))
+
     ag = plans.get("aggressive")
     if ag:
-        body = ""
+        blocks = []
         for i, pl in enumerate(ag.get("parlays", []), 1):
-            co = parlay_odds(pl.get("legs", []))
-            body += f'<div class="sub-l">串关 {i} <span class="combo">合计 @{co}</span></div><div class="legs">' + "".join(leg_line(l) for l in pl.get("legs", [])) + "</div>"
-            if pl.get("note"):
-                body += f'<div class="leg-r">{esc(pl["note"])}</div>'
+            blocks.append((f"串关 {i}", parlay_odds(pl.get("legs", [])), pl.get("legs", []), pl.get("note"), False))
         if ag.get("singles"):
-            body += '<div class="sub-l">博冷单关</div><div class="legs">' + "".join(leg_line(l) for l in ag["singles"]) + "</div>"
-        if ag.get("note"):
-            body += f'<p class="plan-note">{esc(ag["note"])}</p>'
-        cards += plan_card("03", "激进", ag.get("title", "串关博高赔"), ag.get("sub", "博高回报、容忍低命中"), body, "bold")
-    return f'<div class="plans reveal">{cards}</div>'
+            blocks.append(("博冷单关", None, ag["singles"], None, True))
+        tiers.append(("03", "激进", "顺风串 + 博冷", "bold",
+                      ag.get("title", "串关博高赔"), ag.get("sub", "博高回报、容忍低命中"),
+                      _legs_grid(blocks), ag.get("note")))
+
+    if not tiers:
+        return ""
+
+    heads, panels = "", ""
+    for idx, (num, name, hint, accent, title, sub, body, note) in enumerate(tiers):
+        on = " on" if idx == 0 else ""
+        heads += (f'<button class="tab {accent}{on}" type="button" role="tab" data-i="{idx}">'
+                  f'<span class="tb">{num}</span>'
+                  f'<span class="tt"><span class="tn">{esc(name)}</span>'
+                  f'<span class="td">{esc(hint)}</span></span></button>')
+        note_html = f'<p class="tp-note">{esc(note)}</p>' if note else ""
+        panels += (f'<div class="tab-panel {accent}{on}" role="tabpanel" data-i="{idx}">'
+                   f'<div class="tp-tier" aria-hidden="true"><span class="tb">{num}</span>{esc(name)}</div>'
+                   f'<h3 class="tp-title">{esc(_plan_heading(title, name))}</h3>'
+                   f'<p class="tp-sub">{esc(sub)}</p>'
+                   f'{body}{note_html}</div>')
+
+    return (f'<div class="plans-tabs reveal"><div class="tabs">'
+            f'<div class="tabs-head" role="tablist">{heads}</div>{panels}</div></div>')
 
 
 # ---------- 复盘模块（上期回顾，放三档方案下面） ----------
@@ -563,39 +586,40 @@ a{color:inherit}
 .bic svg{width:62%;height:62%;fill:currentColor;display:block}
 .bic.mono{color:var(--brand-mono)}
 .bic.gen{font-size:11px;font-weight:800;color:var(--ink2);font-family:"Fraunces",serif}
-/* plans */
-.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:50px;align-items:start}
-.plan{--clip:412px;--pa:var(--clay);--pa-d:var(--clay-d);--pa-t:var(--clay-t);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
-.plan.calm{--pa:var(--sage);--pa-d:var(--sage);--pa-t:color-mix(in srgb,var(--sage) 14%,var(--panel))}
-.plan.mid{--pa:var(--gold);--pa-d:var(--gold);--pa-t:color-mix(in srgb,var(--gold) 15%,var(--panel))}
-.plan.bold{--pa:var(--clay);--pa-d:var(--clay-d);--pa-t:var(--clay-t)}
-/* 等高卡片：所有卡正文区统一高度，超出的截断+渐隐+展开 */
-.plan-body{position:relative}
-.plan-clip{height:var(--clip);overflow:hidden;display:flex;flex-direction:column}
-.plan.expanded .plan-clip{height:auto}
-.plan-fade{position:absolute;left:0;right:0;bottom:0;height:108px;background:linear-gradient(180deg,transparent,var(--panel) 88%);pointer-events:none;display:none}
-.plan.ov .plan-fade{display:block}
-.plan.ov.expanded .plan-fade{display:none}
-.plan-more{display:none;align-items:center;justify-content:center;gap:7px;font:inherit;font-size:12.5px;font-weight:600;color:var(--pa-d);background:var(--pa-t);border:1px solid color-mix(in srgb,var(--pa) 30%,transparent);border-radius:10px;padding:9px;cursor:pointer;transition:.16s}
-.plan-more:hover{background:var(--pa);color:#fff;border-color:var(--pa)}
-[data-theme="dark"] .plan-more:hover{color:#1a140f}
-.plan.ov .plan-more{display:inline-flex;position:absolute;left:0;right:0;bottom:0;width:100%}
-.plan.ov.expanded .plan-more{position:static;margin-top:14px}
-.pm-i{width:6px;height:6px;border-right:1.7px solid currentColor;border-bottom:1.7px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .2s}
-.plan.expanded .pm-i{transform:rotate(-135deg) translateY(1px)}
-/* header：序号色块徽章 + 档位名 eyebrow + 策略标题（替代左侧竖条，色彩集中在小元素上） */
-.plan-h{display:flex;align-items:flex-start;gap:13px;margin-bottom:14px}
-.plan-badge{width:36px;height:36px;border-radius:11px;background:var(--pa);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;font-family:"Fraunces",Georgia,serif;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;box-shadow:0 3px 9px -3px color-mix(in srgb,var(--pa) 65%,transparent)}
-[data-theme="dark"] .plan-badge{color:#1a140f}
-.plan-h-txt{flex:1;min-width:0}
-.plan-k{display:block;font-size:11.5px;letter-spacing:.05em;color:var(--pa-d);font-weight:700;margin-bottom:3px}
-.plan-h h3{font-size:19px;line-height:1.28;font-weight:500;letter-spacing:-.008em;text-wrap:balance}
-.plan-sub{font-size:13px;color:var(--ink2);margin:0 0 16px;line-height:1.55;min-height:40px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.sub-l{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--pa-d);margin:18px 0 9px;letter-spacing:.02em}
-.sub-l:before{content:"";width:14px;height:2px;border-radius:2px;background:var(--pa);flex:none}
+/* plans — 三档：聚焦切换 Tabs（一次看一档，选中档独占全宽面板） */
+.plans-tabs{margin-bottom:50px}
+.tabs{--pa:var(--clay);--pa-d:var(--clay-d);--pa-t:var(--clay-t);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.tabs-head{display:flex;background:var(--panel2);border-bottom:1px solid var(--line)}
+.tab{flex:1;min-width:0;font:inherit;cursor:pointer;background:none;border:none;border-bottom:2.5px solid transparent;padding:15px 18px;display:flex;align-items:center;gap:11px;color:var(--muted);text-align:left;transition:background .18s,border-color .18s}
+.tab:not(:last-child){border-right:1px solid var(--line)}
+.tab .tb{width:30px;height:30px;border-radius:9px;background:color-mix(in srgb,var(--pa) 16%,var(--panel));color:var(--pa);display:inline-flex;align-items:center;justify-content:center;flex:none;font-family:"Fraunces",Georgia,serif;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;transition:.18s}
+.tab .tt{min-width:0;line-height:1.3}
+.tab .tn{font-size:14.5px;font-weight:700;color:var(--ink2);font-family:"Fraunces",Georgia,serif}
+.tab .td{font-size:11px;color:var(--muted);margin-left:6px}
+.tab:hover{background:color-mix(in srgb,var(--pa) 7%,var(--panel2))}
+.tab.on{background:var(--panel);border-bottom-color:var(--pa)}
+.tab.on .tb{background:var(--pa);color:#fff}
+[data-theme="dark"] .tab.on .tb{color:#1a140f}
+.tab.on .tn{color:var(--pa-d)}
+.tab.calm{--pa:var(--sage);--pa-d:var(--sage);--pa-t:color-mix(in srgb,var(--sage) 14%,var(--panel))}
+.tab.mid{--pa:var(--gold);--pa-d:var(--gold);--pa-t:color-mix(in srgb,var(--gold) 15%,var(--panel))}
+.tab.bold{--pa:var(--clay);--pa-d:var(--clay-d);--pa-t:var(--clay-t)}
+.tab-panel{--pa:var(--clay);--pa-d:var(--clay-d);--pa-t:var(--clay-t);padding:26px 28px;display:none}
+.tab-panel.on{display:block}
+@media(prefers-reduced-motion:no-preference){.tab-panel.on{animation:tfade .3s ease}}
+@keyframes tfade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.tab-panel.calm{--pa:var(--sage);--pa-d:var(--sage);--pa-t:color-mix(in srgb,var(--sage) 14%,var(--panel))}
+.tab-panel.mid{--pa:var(--gold);--pa-d:var(--gold);--pa-t:color-mix(in srgb,var(--gold) 15%,var(--panel))}
+.tab-panel.bold{--pa:var(--clay);--pa-d:var(--clay-d);--pa-t:var(--clay-t)}
+.tp-tier{display:none}
+.tp-title{font-size:21px;line-height:1.28;margin-bottom:7px;color:var(--ink);text-wrap:balance}
+.tp-sub{font-size:13px;color:var(--ink2);margin:0 0 20px;line-height:1.55;max-width:72ch}
+.tp-gh{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--pa-d);margin:12px 0 -2px;letter-spacing:.02em}
+.tp-gh:first-child{margin-top:0}
+.tp-gh:before{content:"";width:14px;height:2px;border-radius:2px;background:var(--pa);flex:none}
 .combo{margin-left:auto;color:var(--pa-d);background:var(--pa-t);border:1px solid color-mix(in srgb,var(--pa) 26%,transparent);padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:0}
-/* 玩法行：玩法独占首行（不再被固定宽比赛名挤成竖排），赔率右对齐；比赛名+信心降到次行 */
-.legs{display:flex;flex-direction:column;gap:13px}
+/* 玩法行：玩法独占首行，赔率右对齐；比赛名+信心降到次行。tp-legs 按内容自动铺成多列 */
+.tp-legs{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px 26px;align-items:start}
 .leg{display:flex;flex-direction:column;gap:3px}
 .leg-top{display:flex;align-items:baseline;gap:10px}
 .leg-p{font-weight:600;font-size:14px;line-height:1.42;flex:1;min-width:0}
@@ -605,7 +629,8 @@ a{color:inherit}
 .leg-conf{margin-left:auto;display:inline-flex;align-items:center;flex:none}
 .leg-r{font-size:12px;color:var(--muted);line-height:1.55;margin-top:1px}
 .dots{color:var(--pa);font-size:10px;letter-spacing:2px}.dots-o{color:var(--line2)}
-.plan-note{font-size:12px;color:var(--muted);margin-top:auto;border-top:1px dashed var(--line2);padding-top:15px;line-height:1.55}
+.tp-note{font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line2);padding-top:14px;margin-top:22px;line-height:1.55}
+.tp-pnote{grid-column:1/-1;margin-top:-4px}
 /* match */
 .match{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:72px}
 .m-top{display:flex;align-items:center;gap:13px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:18px}
@@ -752,7 +777,7 @@ footer{margin-top:42px;padding-top:24px;border-top:1px solid var(--line2);color:
  @keyframes rise{to{opacity:1;transform:none}}
 }
 @media(max-width:760px){
- .wrap{padding:0 18px}.plans{grid-template-columns:1fr;gap:14px}.views{grid-template-columns:1fr}
+ .wrap{padding:0 18px}.tab{padding:12px 11px;gap:8px}.tab .td{display:none}.tab-panel{padding:20px 18px}.tp-legs{grid-template-columns:1fr}.views{grid-template-columns:1fr}
  .markets{grid-template-columns:1fr}.hero{padding:38px 0 24px}.match{padding:20px}
  .m-top h2{font-size:22px}.vp-mk{margin-left:0}
 }
@@ -769,11 +794,15 @@ footer{margin-top:42px;padding-top:24px;border-top:1px solid var(--line2);color:
  body{background:#fff;padding:0}
  .bg,.topbar,.nav-act,.no-print{display:none!important}
  .hero{padding:0 0 14px}.wrap{max-width:none;padding:0}
- .plan,.match{box-shadow:none;border-color:#d9cfba}
- .match,.plan,.view,.mkt,.vp,.tr,tr{break-inside:avoid}
+ .tabs,.match{box-shadow:none;border-color:#d9cfba}
+ .match,.view,.mkt,.vp,.tr,tr{break-inside:avoid}
  .fold>summary,.mkt summary{display:none!important}
- .plan-clip{height:auto!important;overflow:visible!important}
- .plan-fade,.plan-more{display:none!important}
+ .tabs{border:none}
+ .tabs-head{display:none!important}
+ .tab-panel{display:block!important;break-inside:avoid;padding:14px 2px;border-top:1px solid #e2dac8}
+ .tab-panel:first-of-type{border-top:none}
+ .tp-tier{display:flex!important;align-items:center;gap:8px;margin-bottom:8px;font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:13.5px;color:#964127}
+ .tp-tier .tb{width:24px;height:24px;border-radius:7px;background:#b1542f;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
  .fold{background:#fff;border-color:#e2dac8}
  .reveal{opacity:1!important;transform:none!important;animation:none!important}
  a[href^="#"]{text-decoration:none}
@@ -793,16 +822,15 @@ MAIN_JS = """
  lbl();
  if(tb)tb.addEventListener('click',function(){var d=root.getAttribute('data-theme')==='dark',n=d?'light':'dark';
   root.setAttribute('data-theme',n);try{localStorage.setItem('wc-theme',n)}catch(e){}lbl();});
- // 方案卡：内容超阈值才截断并显示"展开更多"，短卡完整显示
- function clampPlans(){document.querySelectorAll('.plan').forEach(function(p){
-  var c=p.querySelector('.plan-clip');if(!c)return;
-  var lim=parseInt(getComputedStyle(p).getPropertyValue('--clip'))||410;
-  if(!p.classList.contains('expanded'))p.classList.toggle('ov',c.scrollHeight>lim+8);});}
- clampPlans();
- if(document.fonts&&document.fonts.ready)document.fonts.ready.then(clampPlans);
- document.querySelectorAll('.plan-more').forEach(function(b){b.addEventListener('click',function(){
-  var p=b.closest('.plan'),ex=p.classList.toggle('expanded'),t=b.querySelector('.pm-t');
-  if(t)t.textContent=ex?'收起':'展开更多';});});
+ // 三档 Tabs：点标签切换，一次聚焦一档（PDF 导出时由 @media print 把三档全展开）
+ var tabs=[].slice.call(document.querySelectorAll('.tab'));
+ var panels=[].slice.call(document.querySelectorAll('.tab-panel'));
+ tabs.forEach(function(t){t.addEventListener('click',function(){
+  var i=t.getAttribute('data-i');
+  tabs.forEach(function(x){x.classList.remove('on');});
+  panels.forEach(function(x){x.classList.remove('on');});
+  t.classList.add('on');
+  var p=document.querySelector('.tab-panel[data-i="'+i+'"]');if(p)p.classList.add('on');});});
  var pf=document.getElementById('pdfBtn'),op=[];
  function ex(){op=[];document.querySelectorAll('details').forEach(function(d){if(!d.open){op.push(d);d.open=true;}});}
  function rs(){op.forEach(function(d){d.open=false;});op=[];}
