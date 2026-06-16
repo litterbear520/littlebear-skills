@@ -12,6 +12,7 @@
 | Skill | 一句话介绍 | 详解 |
 | --- | --- | --- |
 | 🏆 [worldcup-bet-advisor](./worldcup-bet-advisor) | 世界杯竞彩「玩法建议」：综合多个 AI 预测 + 实时倍率去水找价值，给稳健/平衡/激进三档方案，产出 Anthropic 风格单文件 HTML 报告 | [↓ 跳转](#-worldcup-bet-advisor世界杯竞彩玩法建议) |
+| 💼 [boss-job-analyzer](./boss-job-analyzer) | BOSS直聘岗位/市场分析：复用你 Chrome 登录态抓岗位，Claude 读 JD 标技能、脚本做确定性统计，产出 Anthropic 风格单文件 HTML 报告（技术栈/语言/学历薪资/加分项 + 可点开原文的岗位卡片墙） | [↓ 跳转](#-boss-job-analyzerboss直聘岗位分析) |
 
 > 更多技能持续添加中……
 
@@ -91,6 +92,38 @@ Copy-Item -Recurse littlebear-skills\worldcup-bet-advisor "$HOME\.claude\skills\
 **了解更多**：[SKILL.md](./worldcup-bet-advisor/SKILL.md) ｜ 决策口径见 [playbook.md](./worldcup-bet-advisor/references/playbook.md)
 
 > ⚠️ 本技能产出**不构成投注建议**，理性娱乐、量力而行。
+
+---
+
+### 💼 boss-job-analyzer（BOSS直聘岗位分析）
+
+把「看看 BOSS 上某类岗位都要什么」这种口语需求，变成一份**岗位数据** + 一份 **Anthropic 博客风的单文件 HTML 报告**。
+
+**它做什么**
+
+- 复用你日常 Chrome 的登录态，通过 web-access 的 CDP 像人一样浏览、抓取 BOSS直聘 某类岗位的真实 JD（岗位名 / 薪资 / 公司 / 经验学历 / 技能标签 / 职责要求原文）
+- **Claude 读 JD 标技能、脚本做统计**：模型逐岗标注技术栈/语言/职责（适配任意岗位、不靠写死词典），脚本确定性地算占比、共现、薪资分布——可复现、不失真
+- 产出单文件报告：顶部概览 + 学习建议 callout + 5 个分析维度（技术栈雷达 / 语言占比 / 学历薪资分布 / 加分项 / 市场规律洞察）+ **可点开看 BOSS 原文的岗位卡片墙**（带搜索、经验学历筛选、薪资排序）
+- 内置双主题、浮动目录、可导出 PDF，图表全手写 CSS/SVG、零图表库
+
+**什么时候会触发**
+
+当你同时提到 BOSS / boss直聘 / zhipin 和某类岗位，想了解要求、薪资、技术栈、加分项、市场行情、技术趋势、求职准备方向、技能学习路线等任何一项时。
+
+**前置要求**
+
+- Python 3（仅标准库，无需 `pip install`）
+- **[web-access](https://github.com/eze-is/web-access) 技能（硬依赖）**：BOSS 反爬强，必须用它的 CDP 复用你 Chrome 的登录态抓取 + 打开报告。跨工具一键装：
+
+  ```bash
+  npx skills add eze-is/web-access
+  ```
+
+  没装也行——触发技能时它会先问你要不要装。
+
+**了解更多**：[SKILL.md](./boss-job-analyzer/SKILL.md) ｜ 站点抓取口径见 [zhipin-site-notes.md](./boss-job-analyzer/references/zhipin-site-notes.md)
+
+> ⚠️ 本技能复用用户合法登录态、像人一样浏览，请遵守站点条款、合理控制抓取频率。
 
 ---
 
