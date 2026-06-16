@@ -4,15 +4,19 @@
 
 **把口语需求变成可复现产物的 Agent Skills 合集**
 
-抓数据 · 多步判断 · 出精美报告——一句话触发，脚本管确定性、模型管判断，结果可复现、省 token。
+抓数据 · 多步判断 · 出精美报告——脚本管确定性、模型管判断，结果可复现、省 token。
 
-[![license](https://img.shields.io/badge/license-MIT-C15F3C?style=flat-square)](./LICENSE) ![skills](https://img.shields.io/badge/skills-2-C15F3C?style=flat-square) ![format](https://img.shields.io/badge/format-Agent_Skills-3b3b3b?style=flat-square)
+[![license](https://img.shields.io/badge/license-MIT-C15F3C?style=flat-square)](./LICENSE) ![skills](https://img.shields.io/badge/skills-2-C15F3C?style=flat-square) [![Agent Skills](https://img.shields.io/badge/standard-Agent_Skills-3b3b3b?style=flat-square)](https://agentskills.io)
 
 适用于 Claude Code · Cursor · Codex · OpenCode 等支持 Agent Skills 的工具
 
 </div>
 
 ---
+
+## 什么是 Skills
+
+Skills 是一组「指令 + 脚本 + 资源」的文件夹，Agent（如 Claude）按 `SKILL.md` 里写明的触发时机自动加载，把某类专门任务用**可复现**的方式做好。本仓库技能遵循 [Agent Skills](https://agentskills.io) 开放标准，与具体工具无关——同一份 `SKILL.md`，Claude Code、Cursor、Codex、OpenCode 都能装。
 
 ## 技能一览
 
@@ -25,7 +29,7 @@
 
 ## 安装
 
-技能采用标准 [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills)（`SKILL.md`）格式，与具体工具无关。三选一：
+技能采用标准 [Agent Skills](https://agentskills.io)（`SKILL.md`）格式，与具体工具无关。三选一：
 
 **① `npx skills`（跨工具一键，推荐）**
 
@@ -61,6 +65,8 @@ Copy-Item -Recurse littlebear-skills\worldcup-bet-advisor "$HOME\.claude\skills\
 
 ### worldcup-bet-advisor
 
+> 不替你下注——把一堆球评和实时赔率揉碎了喂给你，只帮你看清哪儿有价值、哪儿是坑。
+
 把「最近几场世界杯怎么买」变成一份**三档玩法方案** + 一份单文件 HTML 报告。
 
 - 综合多个 AI agent（默认 Claude + DeepSeek）的预测比分与讨论
@@ -78,6 +84,8 @@ Copy-Item -Recurse littlebear-skills\worldcup-bet-advisor "$HOME\.claude\skills\
 
 ### boss-job-analyzer
 
+> 别再一条条手翻 JD——让 Claude 替你读完几十条招聘，告诉你这行到底要什么、该补什么。
+
 把「看看 BOSS 上某类岗位都要什么」变成一份**岗位数据** + 一份单文件 HTML 报告。
 
 - 复用你 Chrome 登录态，通过 web-access 的 CDP 抓取某类岗位真实 JD（薪资 / 公司 / 经验学历 / 技能标签 / 职责要求原文）
@@ -92,9 +100,11 @@ Copy-Item -Recurse littlebear-skills\worldcup-bet-advisor "$HOME\.claude\skills\
 
 > 复用合法登录态、像人一样浏览，请遵守站点条款、合理控制抓取频率。
 
-## 关于
+## 关于 & 反馈
 
-个人在用 Claude Code 过程中沉淀下来的工作流，欢迎试用、提 issue、提建议。作者 [@litterbear520](https://github.com/litterbear520)，仓库持续迭代、加入更多自制技能。
+这些是个人在用 Claude Code 过程中沉淀下来的工作流。欢迎试用，也欢迎在 [Issues](https://github.com/litterbear520/littlebear-skills/issues) 提 bug、提建议、求新技能。
+
+作者 [@litterbear520](https://github.com/litterbear520) · 仓库持续迭代、加入更多自制技能。
 
 ## License
 
