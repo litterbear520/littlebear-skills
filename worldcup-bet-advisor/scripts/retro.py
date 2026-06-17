@@ -99,12 +99,14 @@ def cmd_locate(args):
             "kickoff_at": m.get("kickoff_at"), "score": m.get("score"),
         })
 
-    own = None
+    # 与 Track 1 对称：列出【所有】未复盘的自有 run（不只最近一个），Track 2 逐个补买法复盘。
+    # 已复盘的 run（在 own_runs_reviewed 里）跳过；全 pending 的 run（如今天刚出、还没踢）不列。
+    owns = []
     reviewed_runs = set(man["own_runs_reviewed"])
     if RUNS.exists():
         cand = sorted((d for d in RUNS.iterdir() if d.is_dir() and (d / "analysis.json").exists()),
-                      key=lambda d: d.name)
-        for d in reversed(cand):  # 最近的自有 run 优先
+                      key=lambda d: d.name)  # 旧→新
+        for d in cand:
             if d.name in reviewed_runs:
                 continue
             try:
@@ -113,23 +115,25 @@ def cmd_locate(args):
             except (OSError, ValueError):
                 mids = []
             done = [mid for mid in mids if (by_id.get(mid) or {}).get("score") is not None]
-            if done:
-                own = {"date": d.name, "dir": str(d), "match_ids": mids,
-                       "finished_ids": done, "pending_ids": [x for x in mids if x not in done]}
-                break
+            if done:  # 至少一场已踢完才可买法复盘
+                owns.append({"date": d.name, "dir": str(d), "match_ids": mids,
+                             "finished_ids": done, "pending_ids": [x for x in mids if x not in done]})
 
-    # 标注重合：哪些"未复盘历史场"同时也在我们上一期 run 里（昨天下注、今天踢完）。
+    # 标注重合：哪些"未复盘历史场"同时也落在【任一】未复盘自有 run 里（昨天下注、今天踢完）。
     # 这类场既要 Track 1 建库（各模型嘉豪预测 vs 终场 → 经验），又要 Track 2 买法对账，
     # 别把前者塌缩进后者——in_own_run 让模型在数据层就看到这一点。
-    own_ids = set(own["match_ids"]) if own else set()
+    own_ids = set().union(*[set(o["match_ids"]) for o in owns]) if owns else set()
     for h in historical:
         h["in_own_run"] = h["match_id"] in own_ids
     overlap = [h for h in historical if h["in_own_run"]]
 
-    out = {"reviewed_count": len(reviewed), "historical_unreviewed": historical, "own_run_to_review": own}
+    out = {"reviewed_count": len(reviewed), "historical_unreviewed": historical,
+           "own_runs_to_review": owns,
+           "own_run_to_review": owns[-1] if owns else None}  # 兼容：最近一个，供报告 --retro 渲染
     if args.out:
         Path(args.out).write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"[locate] 未复盘历史场 {len(historical)} | 待复盘自有 run: {own['date'] if own else '无'}")
+    run_dates = [o["date"] for o in owns]
+    print(f"[locate] 未复盘历史场 {len(historical)} | 待复盘自有 run {len(owns)} 个: {run_dates or '无'}")
     if overlap:
         names = "、".join(f'{h["team_a"]}vs{h["team_b"]}' for h in overlap)
         print(f"[locate] ⚠ {len(overlap)} 场重合：既要 Track1 建库嘉豪复盘、又要 Track2 买法对账，别只做后者 → {names}")

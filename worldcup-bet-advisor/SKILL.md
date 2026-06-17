@@ -59,13 +59,13 @@ python scripts/retro.py locate --out "$WS/retro_locate.json"
 
 输出：
 - `historical_unreviewed`：已踢完 + 有预测 + 没复盘过的历史场；每条带 `in_own_run`（true = 这场也在我们上一期 run 里＝重合场）。
-- `own_run_to_review`：上一期我们自己的 run（含 `finished_ids` / `pending_ids`）。
+- `own_runs_to_review`：**所有**未复盘的自有 run 列表（旧→新，各含 `finished_ids` / `pending_ids`）；`own_run_to_review` = 其中最近一个，供报告 `--retro` 渲染。
 - `reviewed_count`：manifest 里已复盘的场数。
 - 有重合时脚本会打印一行 `⚠` 提醒：这些场**既要 Track 1 建库、又要 Track 2 对账，别只做后者**。
 
 触发逻辑：
 - `historical_unreviewed` 非空 → 做 **Track 1**（不管它是否也在上期 run 里；首次运行 `reviewed_count`=0 时这里可能很多场，要全部建库）。
-- `own_run_to_review` 非空 → **额外**做 **Track 2**。
+- `own_runs_to_review` 非空 → 对其中**每个** run **额外**做 **Track 2**（已复盘的 run 不在列表里、不重复）。
 - 两者都空 → 真没东西可复盘，直接进第 0 步。
 
 ### Track 1 — 建库复盘（对所有未复盘已踢完场）
@@ -78,23 +78,23 @@ python scripts/retro.py locate --out "$WS/retro_locate.json"
 - 汇总 → **增量更新** `references/experience.md` 的【模型校准】+【可信信号】两小节（这就是"嘉豪预测分析经验"）+ 顶部"累计样本 N 场" + "复盘日志"加一行（日期 · 这批场次 · 学到什么）。买法层面的教训不在这写、留给 Track 2 写【买法倾向】。
 - 标记：`python scripts/retro.py mark --ids <这批全部> --synced <今天日期>`，**先 mark 再往下**，保证不重复分析。
 
-### Track 2 — 上一期推荐复盘（grade + 问用户 + 分析）
+### Track 2 — 自有 run 买法复盘（对每个未复盘的 run；grade + 问用户 + 分析）
 
-对 `own_run_to_review`（设其目录 `$PREV`）。它的 `finished_ids` 多半已在 Track 1 读过嘉豪正文了，这里**复用 Track 1 事实**、只补"我们的买法对没对"这一层：
+和 Track 1 对称：**只要有没复盘过的自有 run 就补买法复盘**——遍历 `own_runs_to_review` 里的**每一个** run，已复盘的（在 `own_runs_reviewed` 里）不再重复。通常 0-1 个；**若积压多期，从旧到新逐个补，别只挑最近那个**。设当前处理的 run 目录为 `$PREV`，它的 `finished_ids` 多半已在 Track 1 读过嘉豪正文，这里**复用 Track 1 事实**、只补"我们的买法对没对"这一层：
 
 - 拉终场对账：`python scripts/retro.py score --ids <$PREV finished_ids,逗号分隔> --out "$PREV/retro_facts.json"`。
 - 读 `$PREV/analysis.json`（上期三档买法 + 价值/陷阱点）。
-- **问用户上次买了哪个（含自选腿）**：`AskUserQuestion` 列出上期三档（稳健/平衡/激进）与关键腿，让用户选实际买了哪档 / 哪些腿（含"没买 / 只看"）。用户常**超出我们三档**自己组合（自选比分串、对冲腿、半全场串等）——让他一并补上实际买了什么。
+- **问用户这期买了哪个（含自选腿）**：`AskUserQuestion` 列出该期三档（稳健/平衡/激进）与关键腿，让用户选实际买了哪档 / 哪些腿（含"没买 / 只看"）。用户常**超出我们三档**自己组合（自选比分串、对冲腿、半全场串等）——让他一并补上实际买了什么。积压的旧 run 用户可能记不清，允许选"记不清"——那条 run 仍要 grade 我们的推荐、写买法经验、mark，只是缺"用户实际所买"这一维。
 - **判定分两层，判不了的必须问用户、不许猜**：
   - **脚本可判定**（胜平负 / 让球 / 比分 / 总进球——只依赖**终场比分**）→ 用 `retro_facts.json` 的事实自动判 hit/miss。
   - **脚本判不了**（**半全场 htft、半场比分、任何依赖"半场/过程"的玩法**；或某场终场接口暂时拉不到）→ **已核实 worldcup + 竞彩两接口都只有全场比分、没有半场**（worldcup match.score 仅 team_a/team_b 全场值，odds 仅 HAD/HHAD；这些又是该站自有模拟赛程、外部也搜不到），**别再去翻找或猜**。这类腿**绝不要猜、也别标 null 或"存疑/偏飞"含糊带过**——把这些**具体腿**用 `AskUserQuestion` 列给用户问"中没中"（选项：`中了` / `没中` / `还没结算`），拿用户回答写进 `hit`。我们自己三档里的此类腿（如"阿根廷 半全场主/主"）同样要问、同样别猜。
   - 实操：先问"买了哪档/哪些腿"，拿到用户实际所买（含自选）后，把其中**判不了的腿**汇总成一条 `AskUserQuestion`（multiSelect）追问中没中——通常一轮搞定，别为省一次提问而去猜半场结果。
 - 据「我们的推荐 + 用户实际所买(含自选) + 终场 + 用户对判不了腿的确认」复盘：每条推荐 hit/miss、用户那注得失、哪个模型这几场更靠谱、大方向对不对、下次怎么调。写 `$PREV/retro.json`（schema 见 `references/playbook.md` 第七节；事实抄 `retro_facts.json`，判断你写；可记 `historical_synced` = 本次 Track 1 新建库场数）。
 - **买法层面教训也回灌**：把"我们哪类推荐屡空、用户那注得失"并进 `experience.md` 的"买法倾向"小节 + 复盘日志（与 Track 1 的更新合并写，别重复开段）。
-- 标记：仅当 `pending_ids` 为空（该 run 全部踢完）才 `python scripts/retro.py mark --run <$PREV 日期>`；**还有 pending 场就先别标 run**，留到它们也踢完再标，免得漏掉那场的买法对账（场次 id 已在 Track 1 mark 过）。
-- `$PREV/retro.json` 在第 5 步 `--retro` 渲染进今天报告"上期复盘回顾"。
+- 标记：仅当该 run 的 `pending_ids` 为空（全部踢完）才 `python scripts/retro.py mark --run <$PREV 日期>`；**还有 pending 场就先别标 run**，留到它们也踢完再标，免得漏掉那场的买法对账（场次 id 已在 Track 1 mark 过）。
+- **多期时只渲染最近一个**：今天报告的 `--retro` 用最近那个 run 的 `retro.json`（locate 已把它单独放在 `own_run_to_review` 字段）；更早补的旧 run 只更新买法经验 + mark，不进今天报告。
 
-复盘做完，带着 `experience.md` 进入选场。
+复盘做完（所有未复盘 run 都补完），带着 `experience.md` 进入选场。
 
 ## 第 0 步：选场（触发后先做）
 
@@ -214,5 +214,5 @@ python scripts/build_report.py --merged "$WS/merged.json" --analysis "$WS/analys
 - 只覆盖"未开赛 + 有预测 + 在售"的场次；已封盘/未开售如实告知。
 - 某玩法未开售（字段缺失）= 跳过，不脑补倍率。
 - 胜平负常常未开放单关（强弱悬殊场尤甚），这类只能进串关——别推成单关。
-- 复盘：**Track 1 建库是每日引擎**——只要有"已踢完 + 有预测 + 没复盘过"的历史场就做（含我们自己下注过的重合场，**重合也不跳过**；首次没有上一期报告也要把积压历史全部建库）。**Track 2 买法对账叠在其上**，仅在有自有上一期 run 时做。**硬顺序：先 Track 1 写经验，再 Track 2 问用户**。复盘过的场次（`reviewed_matches.json`）不重复分析，下次只增量。
+- 复盘两条线**对称、都增量补全**：**Track 1 建库**对所有未复盘历史场(含重合场、首次积压)逐场建嘉豪经验；**Track 2 买法复盘**对**所有**未复盘自有 run(不只最近一个、积压则逐个补)做买法对账。已复盘的——场次在 `reviewed_match_ids`、run 在 `own_runs_reviewed`——都不再重复，下次只增量。**硬顺序：先 Track 1 写经验，再 Track 2 问用户**。
 - **不构成投注建议**；理性娱乐、量力而行。
