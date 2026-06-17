@@ -15,7 +15,7 @@ allowed-tools: Bash, Read, Write, Edit, Skill, AskUserQuestion, ToolSearch, mcp_
 - **脚本管确定性、模型管判断**：抓取、解析倍率、去水算概率、串关连乘 → 脚本；读讨论、下结论、定三档方案 → 你（模型）。这样可复现、省 token。
 - **直连优先、CDP 兜底**：两侧接口都能直接拉（脚本默认 urllib）。只有被阻断时才走 web-access 的 CDP，并**先向用户展示反爬须知**。
 - **数据细节先读 `references/data-sources.md`**：两站接口、字段字典（sw/sd/sl 比分、t 总进球、ht 半全场、single* 单关标记）、跨站队名匹配都在里面。开工前读它。
-- **复盘驱动进化（每日建库）**：每次触发先做赛后复盘（第 R 步）。核心是 **Track 1 建库**——把**每一场新踢完、未复盘的比赛**（含我们自己下注过的）的"各模型嘉豪预测 vs 真实比分"提炼成可泛化经验，沉淀进 `references/experience.md`；这是经验库长大的引擎，**不是首次才跑一次**。其上再叠 **Track 2** 复盘我们上一期那一注买法。判断/规律全由你（模型）做，`scripts/retro.py` 只拉终场比分与对账事实；复盘过的场次记在 `references/reviewed_matches.json`，不重复分析。
+- **复盘驱动进化（每日建库）**：每次触发先做赛后复盘（第 R 步）。核心是 **Track 1 建库**——把**每一场新踢完、未复盘的比赛**（含我们自己下注过的）的"各模型嘉豪预测 vs 真实比分"提炼成可泛化经验，沉淀进本机 `references/experience.local.md`（与版本化的 `experience.seed.md` 共享基线一起读；详见第 R 步）；这是经验库长大的引擎，**不是首次才跑一次**。其上再叠 **Track 2** 复盘我们上一期那一注买法。判断/规律全由你（模型）做，`scripts/retro.py` 只拉终场比分与对账事实；复盘过的场次记在本机 `references/reviewed_matches.json`，不重复分析。
 
 工作目录：每次新建 `runs/<日期>/`（在本 skill 目录下），所有中间文件和最终 `report.html` 放这里。命令示例里的 `$WS` 即指它。
 
@@ -56,8 +56,8 @@ done
 
 复盘是这个 skill 的**自我进化引擎**——每次触发都先做、再带着经验出今天的买法。它干两件**不同**的事，别混为一谈、更别把前者并进后者：
 
-- **Track 1 · 建库复盘 ＝「嘉豪预测分析经验」→ 提高判断力**：把**每一场已踢完、还没复盘过的比赛**的"各模型嘉豪预测 vs 真实比分"提炼成可泛化经验——**哪个模型的嘉豪判断更可参考、哪类信号方向更准**，写进 `references/experience.md` 的【模型校准】+【可信信号】两小节。这是经验库长大的**唯一**途径，只要昨天有球踢完今天就要做，**不是"首次才跑的一次性大 backfill"**。它改进的是第 3 步**读讨论时信谁**。
-- **Track 2 · 买法对账 ＝「买法经验」→ 提高买法推荐**：复盘我们**上一期那三档买法**赢没赢、用户那一注中没中，把"哪类买法屡空、哪类性价比高"沉淀进 `references/experience.md` 的【买法倾向】小节，并写 `retro.json` 渲染进今天报告。它改进的是第 4 步**定三档方案时怎么买**。
+- **Track 1 · 建库复盘 ＝「嘉豪预测分析经验」→ 提高判断力**：把**每一场已踢完、还没复盘过的比赛**的"各模型嘉豪预测 vs 真实比分"提炼成可泛化经验——**哪个模型的嘉豪判断更可参考、哪类信号方向更准**，写进本机 `references/experience.local.md` 的【本地新增·模型校准】+【本地新增·可信信号】。这是经验库长大的**唯一**途径，只要昨天有球踢完今天就要做，**不是"首次才跑的一次性大 backfill"**。它改进的是第 3 步**读讨论时信谁**。
+- **Track 2 · 买法对账 ＝「买法经验」→ 提高买法推荐**：复盘我们**上一期那三档买法**赢没赢、用户那一注中没中，把"哪类买法屡空、哪类性价比高"沉淀进本机 `references/experience.local.md` 的【本地新增·买法倾向】，并写 `retro.json` 渲染进今天报告。它改进的是第 4 步**定三档方案时怎么买**。
 - **两类经验各自跨期累计**：判断力(信谁) 与 买法力(怎么买) 分开沉淀、分别越打越准——别把两者混写一锅。
 
 **两条线高频重合，但重合 ≠ 只做一条。** 我们昨天下注的场今天踢完，就**同时**落进 Track 1（未复盘历史场）和 Track 2（上期 run）——这是**常态**，不是边界情况。它们问的是不同问题：
@@ -65,13 +65,19 @@ done
 | | Track 1 建库 | Track 2 对账 |
 |---|---|---|
 | 问什么 | 哪个模型嘉豪读法对了、哪类信号被验证（**可泛化**） | 我们那一注/那一档赢没赢（**这一单**） |
-| 产物 | 增量写 `experience.md`（跨期大脑） | `retro.json` + 问用户买了哪档 |
+| 产物 | 增量写 `experience.local.md`（本机大脑；seed 只读） | `retro.json` + 问用户买了哪档 |
 | 范围 | 所有未复盘已踢完场 | 仅我们自己的上一期 run |
 
 对重合的场**一次遍历同时产出两者**（嘉豪正文只读一遍），但 **Track 1 的经验沉淀绝不能省**——这正是上一版被塌缩掉、要修的部分。
 
-**硬顺序**：先把 Track 1 跑完、写进 `experience.md`、`mark` 掉，**再**做 Track 2 问用户"上期买了哪档"。永远别用买法问题开场——**开场先建库**。
+**硬顺序**：先把 Track 1 跑完、写进 `experience.local.md`、`mark` 掉，**再**做 Track 2 问用户"上期买了哪档"。永远别用买法问题开场——**开场先建库**。
 （判断/规律/校准全由你做；`scripts/retro.py` 只算确定性事实：终场比分、各模型方向对错。）
+
+**经验库 = 种子 + 本地两份**（隐私/可发布的关键）：
+- `references/experience.seed.md`（**版本化、共享基线**，作者 curated 的通用规律）+ `references/experience.local.md`（**gitignore、本机实时累计**，含你的下注流水）。
+- **读**：两份都读，冲突时**本地优先**。**写**：自动复盘**只写 local、绝不写 seed**（seed 由作者把 local 里验证可靠的通用规律手动提炼后再 push）。
+- `reviewed_matches.json`（本机进度账本）同为 gitignore，不跨用户共享。
+- **首次运行**若 `experience.local.md` 不存在：先建一份（含【本地新增·模型校准 / 可信信号 / 买法倾向】三个空节 + 空"复盘日志" + "累计样本 0 场"），再开始建库。
 
 先定位有什么可复盘：
 
@@ -97,7 +103,7 @@ python scripts/retro.py locate --out "$WS/retro_locate.json"
 - 拿确定性事实：`python scripts/retro.py score --ids <这批> --out "$WS/track1_facts.json"`（终场比分 + 各模型 bet 方向对错）。
 - 读这些场的嘉豪正文 `fan_subjective_prediction_md`（`fetch_predictions.py matches`），逐场洞察：**哪个模型 / 哪类嘉豪信号（门将评分、体能休整、盘口、边路点、真碾压三件套…）与押对/押错相关**。
 - **按量决定要不要分治**：场次多（首次积压、或一次 ≥6 场）→ 把 match_id 分几批、每批派一个子 agent 并行（参考 web-access 的并行分治、保主 agent 上下文），子 agent 目标导向、**只回结构化小结**（不回原文）；平时只有 2-4 场，主 agent 直接做，别为分治而分治。
-- 汇总 → **增量更新** `references/experience.md` 的【模型校准】+【可信信号】两小节（这就是"嘉豪预测分析经验"）+ 顶部"累计样本 N 场" + "复盘日志"加一行（日期 · 这批场次 · 学到什么）。买法层面的教训不在这写、留给 Track 2 写【买法倾向】。
+- 汇总 → **增量更新本机** `references/experience.local.md` 的【本地新增·模型校准】+【本地新增·可信信号】+ 顶部"累计样本 N 场" + "复盘日志"加一行（日期 · 这批场次 · 学到什么）。**只写 local、不写 seed**；买法层面的教训留给 Track 2 写【本地新增·买法倾向】。
 - 标记：`python scripts/retro.py mark --ids <这批全部> --synced <今天日期>`，**先 mark 再往下**，保证不重复分析。
 
 ### Track 2 — 自有 run 买法复盘（对每个未复盘的 run；grade + 问用户 + 分析）
@@ -112,11 +118,11 @@ python scripts/retro.py locate --out "$WS/retro_locate.json"
   - **脚本判不了**（**半全场 htft、半场比分、任何依赖"半场/过程"的玩法**；或某场终场接口暂时拉不到）→ **已核实 worldcup + 竞彩两接口都只有全场比分、没有半场**（worldcup match.score 仅 team_a/team_b 全场值，odds 仅 HAD/HHAD；这些又是该站自有模拟赛程、外部也搜不到），**别再去翻找或猜**。这类腿**绝不要猜、也别标 null 或"存疑/偏飞"含糊带过**——把这些**具体腿**用 `AskUserQuestion` 列给用户问"中没中"（选项：`中了` / `没中` / `还没结算`），拿用户回答写进 `hit`。我们自己三档里的此类腿（如"阿根廷 半全场主/主"）同样要问、同样别猜。
   - 实操：先问"买了哪档/哪些腿"，拿到用户实际所买（含自选）后，把其中**判不了的腿**汇总成一条 `AskUserQuestion`（multiSelect）追问中没中——通常一轮搞定，别为省一次提问而去猜半场结果。
 - 据「我们的推荐 + 用户实际所买(含自选) + 终场 + 用户对判不了腿的确认」复盘：每条推荐 hit/miss、用户那注得失、哪个模型这几场更靠谱、大方向对不对、下次怎么调。写 `$PREV/retro.json`（schema 见 `references/playbook.md` 第七节；事实抄 `retro_facts.json`，判断你写；可记 `historical_synced` = 本次 Track 1 新建库场数）。
-- **买法层面教训也回灌**：把"我们哪类推荐屡空、用户那注得失"并进 `experience.md` 的"买法倾向"小节 + 复盘日志（与 Track 1 的更新合并写，别重复开段）。
+- **买法层面教训也回灌**：把"我们哪类推荐屡空、用户那注得失"并进本机 `experience.local.md` 的【本地新增·买法倾向】+ 复盘日志（与 Track 1 的更新合并写，别重复开段；仍是只写 local）。
 - 标记：仅当该 run 的 `pending_ids` 为空（全部踢完）才 `python scripts/retro.py mark --run <$PREV 日期>`；**还有 pending 场就先别标 run**，留到它们也踢完再标，免得漏掉那场的买法对账（场次 id 已在 Track 1 mark 过）。
 - **多期时只渲染最近一个**：今天报告的 `--retro` 用最近那个 run 的 `retro.json`（locate 已把它单独放在 `own_run_to_review` 字段）；更早补的旧 run 只更新买法经验 + mark，不进今天报告。
 
-复盘做完（所有未复盘 run 都补完），带着 `experience.md` 进入选场。
+复盘做完（所有未复盘 run 都补完），带着经验库（`experience.seed.md` + `experience.local.md`）进入选场。
 
 ## 第 0 步：选场（触发后先做）
 
@@ -170,7 +176,7 @@ python scripts/merge.py --predictions "$WS/predictions.json" --odds "$WS/odds.js
 
 ## 第 3 步：读讨论、下判断（你来做）
 
-**先读 `references/experience.md`**（复盘累积的经验）：哪个模型在哪类场更可信、嘉豪正文里重点看哪类信号、买法有哪些历史教训——作为"可能有效的提示"带进判断（样本少时弱倾斜，别盖过当场推理）。
+**先读经验库 `references/experience.seed.md`（共享基线）+ `references/experience.local.md`（本机累计、冲突时优先本地）**：哪个模型在哪类场更可信、嘉豪正文里重点看哪类信号、买法有哪些历史教训——作为"可能有效的提示"带进判断（样本少时弱倾斜，别盖过当场推理）。
 
 读 `merged.json`，对**勾选的 agent**逐场读其 `discussion_md`（即 `fan_subjective_prediction_md`）：
 - 抽方向、3-5 个核心论点（保留球员/区域/数据等细节）、最可能比分、模型间分歧点。
@@ -186,7 +192,7 @@ python scripts/merge.py --predictions "$WS/predictions.json" --odds "$WS/odds.js
 - 稳健只取方向一致、可单关的高把握腿；有分歧/未开单关的场次该跳就跳。
 - 串关每腿赔率连乘由报告脚本算，你只需列出腿。
 - 不写真实金额，只给信心星级 + 仓位语言。
-- **结合复盘结论**：若 `experience.md` / 本期复盘指出某模型某类判断更准、某买法倾向屡空，显式据此调整（如"因上期让球大胜全空 + DeepSeek 防反更准，本期稳健更偏 DeepSeek 的小胜/防反剧本"），并在 `analysis.json` 的 `risk_note` 里点一句让用户看到复盘是怎么影响今天的。
+- **结合复盘结论**：若经验库（seed+local）/ 本期复盘指出某模型某类判断更准、某买法倾向屡空，显式据此调整（如"因上期让球大胜全空 + DeepSeek 防反更准，本期稳健更偏 DeepSeek 的小胜/防反剧本"），并在 `analysis.json` 的 `risk_note` 里点一句让用户看到复盘是怎么影响今天的。
 
 ## 第 5 步：生成报告
 
