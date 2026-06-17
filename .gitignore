@@ -219,3 +219,8 @@ __marimo__/
 
 # Skill 运行时工作数据（逐次分析产出，不入库）
 **/runs/
+
+# Skill 本机私有累计（各装机自己的经验/进度，不跨用户共享、不入库）
+# experience.seed.md 是版本化的共享基线；experience.local.md 是本机实时累计
+**/references/experience.local.md
+**/references/reviewed_matches.json

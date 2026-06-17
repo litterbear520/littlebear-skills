@@ -40,10 +40,11 @@ DST="$REPO_ROOT/$SKILL"
 echo "[sync] $SRC"
 echo "   →   $DST   (排除 runs/ 与 __pycache__)"
 
-# 镜像：先清掉 DST 顶层除 runs/.git 外的内容，再从 SRC 拷回（排除 runs/__pycache__）。
+# 镜像：先清掉 DST 顶层除 runs/.git 外的内容，再从 SRC 拷回（排除 runs/__pycache__ 与本地私有文件）。
 # 这样源里删掉的文件，DST 也会同步删掉（真镜像，非只覆盖）。
+# 本地私有(gitignore)文件不回传仓库：experience.local.md（本机经验）、reviewed_matches.json（本机进度账本）。
 find "$DST" -mindepth 1 -maxdepth 1 ! -name 'runs' ! -name '.git' -exec rm -rf {} +
-tar -C "$SRC" --exclude='./runs' --exclude='*__pycache__*' -cf - . | tar -C "$DST" -xf -
+tar -C "$SRC" --exclude='./runs' --exclude='*__pycache__*' --exclude='*.local.md' --exclude='*reviewed_matches.json' -cf - . | tar -C "$DST" -xf -
 
 cd "$REPO_ROOT"
 git add -A "$SKILL"

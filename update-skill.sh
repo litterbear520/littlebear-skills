@@ -36,7 +36,7 @@ fi
 echo "[update] GitHub 有 $BEHIND 个新提交可更新"
 
 # 2. 本地未同步检查：运行副本 vs 仓库(pull 前)，或仓库工作区有未提交改动 → 不自动覆盖
-LOCALDIFF="$(diff -rq --exclude=runs --exclude=__pycache__ --exclude=.git "$RUNTIME" "$DST" 2>/dev/null | head -5)"
+LOCALDIFF="$(diff -rq --exclude=runs --exclude=__pycache__ --exclude=.git --exclude='*.local.md' --exclude=reviewed_matches.json "$RUNTIME" "$DST" 2>/dev/null | head -5)"
 REPODIRTY="$(git -C "$REPO_ROOT" status --porcelain -- "$SKILL" 2>/dev/null | head -5)"
 if [ -n "$LOCALDIFF" ] || [ -n "$REPODIRTY" ]; then
   echo "[update] ⚠ 本地有未同步改动（很可能是累计的经验 / 没推送的修改），不自动拉以免覆盖："
@@ -50,9 +50,11 @@ fi
 if ! git -C "$REPO_ROOT" pull --ff-only -q origin "$BR" 2>/dev/null; then
   echo "[update] ⚠ ff-only 拉取失败（本地与远端分叉），跳过、用本地版"; exit 2
 fi
-if find "$RUNTIME" -mindepth 1 -maxdepth 1 ! -name 'runs' -exec rm -rf {} + \
-   && tar -C "$DST" --exclude='./runs' --exclude='*__pycache__*' --exclude='./.git' -cf - . | tar -C "$RUNTIME" -xf -; then
-  echo "[update] ✓ 已更新到最新并同步到运行副本（请重新读取 SKILL.md / 脚本后再继续）"
+# 覆盖式同步(overlay)：把仓库的代码/种子盖到运行副本，但【不删】本地私有文件。
+# experience.local.md / reviewed_matches.json 不在仓库里，自然不会被覆盖；故不做 pre-rm。
+# 注意：上游若删除/重命名了文件，运行副本里的旧文件不会自动消失（罕见，必要时手动清）。
+if tar -C "$DST" --exclude='./runs' --exclude='*__pycache__*' --exclude='./.git' -cf - . | tar -C "$RUNTIME" -xf -; then
+  echo "[update] ✓ 已更新到最新并同步到运行副本（保留了本地经验；请重新读取 SKILL.md / 脚本后再继续）"
   exit 0
 else
   echo "[update] ⚠ 拉取成功但镜像到运行副本失败，请手动检查 $RUNTIME"; exit 2
