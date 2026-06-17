@@ -118,10 +118,21 @@ def cmd_locate(args):
                        "finished_ids": done, "pending_ids": [x for x in mids if x not in done]}
                 break
 
+    # 标注重合：哪些"未复盘历史场"同时也在我们上一期 run 里（昨天下注、今天踢完）。
+    # 这类场既要 Track 1 建库（各模型嘉豪预测 vs 终场 → 经验），又要 Track 2 买法对账，
+    # 别把前者塌缩进后者——in_own_run 让模型在数据层就看到这一点。
+    own_ids = set(own["match_ids"]) if own else set()
+    for h in historical:
+        h["in_own_run"] = h["match_id"] in own_ids
+    overlap = [h for h in historical if h["in_own_run"]]
+
     out = {"reviewed_count": len(reviewed), "historical_unreviewed": historical, "own_run_to_review": own}
     if args.out:
         Path(args.out).write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[locate] 未复盘历史场 {len(historical)} | 待复盘自有 run: {own['date'] if own else '无'}")
+    if overlap:
+        names = "、".join(f'{h["team_a"]}vs{h["team_b"]}' for h in overlap)
+        print(f"[locate] ⚠ {len(overlap)} 场重合：既要 Track1 建库嘉豪复盘、又要 Track2 买法对账，别只做后者 → {names}")
     print(json.dumps(out, ensure_ascii=False, indent=2))
 
 
