@@ -172,7 +172,7 @@ def brand_icon(brand, cls=""):
 
 # ---------- 玩法表 ----------
 def single_badge(flag):
-    return '<span class="single yes">单关可投</span>' if flag else '<span class="single no">仅过关</span>'
+    return '<span class="single yes">可单买这场</span>' if flag else '<span class="single no">只能串着买</span>'
 
 
 def prob_cell(p):
@@ -195,7 +195,7 @@ def odds_table(title, outcomes, single_flag, value_labels, label_key="label"):
                  f'<td class="num od">{o.get("odds","")}</td>{prob_cell(pct(o.get("fair_prob")))}</tr>')
     return f'''<div class="mkt">
       <div class="mkt-h"><span class="mkt-t">{esc(title)}</span>{single_badge(single_flag)}</div>
-      <table><thead><tr><th>选项</th><th class="num">赔率</th><th class="num">去水概率</th></tr></thead>
+      <table><thead><tr><th>选项</th><th class="num">赔率</th><th class="num">真实概率</th></tr></thead>
       <tbody>{rows}</tbody></table></div>'''
 
 
@@ -294,25 +294,42 @@ def render_match(idx, m, a, value_labels):
     mls_block = ""
     if mls or mkt:
         model_grp = f'<span class="ml-l">模型看好</span>{mls}' if mls else ""
-        mkt_grp = f'<span class="ml-l ml-l2">市场去水</span>{mkt}' if mkt else ""
+        mkt_grp = f'<span class="ml-l ml-l2">盘口测算</span>{mkt}' if mkt else ""
         mls_block = (f'<div class="ml-row"><span class="ml-cap">最可能比分</span>'
                      f'{model_grp}{mkt_grp}</div>')
     vps = ""
     for vp in (a.get("value_points", []) if a else []):
-        mp = f'<span class="vp-mk">市场仅 {fp(vp["market_prob"])}</span>' if vp.get("market_prob") is not None else ""
+        mp = f'<span class="vp-mk">盘口只算 {fp(vp["market_prob"])}</span>' if vp.get("market_prob") is not None else ""
         vps += (f'<div class="vp"><div class="vp-h"><span class="vp-play">{esc(vp.get("play"))}</span>'
                 f'<span class="vp-odds">@{vp.get("odds","")}</span>{mp}</div>'
                 f'<div class="vp-why">{esc(vp.get("why",""))}</div></div>')
-    vps_block = f'<div class="vps"><div class="vps-l">价值点</div>{vps}</div>' if vps else ""
+    vps_block = f'<div class="vps"><div class="vps-l">划算的玩法</div>{vps}</div>' if vps else ""
     # 陷阱点/避雷：市场热但讨论里有明确风险的玩法（别当稳胆）
     tps = ""
     for tp in (a.get("trap_points", []) if a else []):
-        mp = f'<span class="vp-mk">市场 {fp(tp["market_prob"])}</span>' if tp.get("market_prob") is not None else ""
+        mp = f'<span class="vp-mk">盘口 {fp(tp["market_prob"])}</span>' if tp.get("market_prob") is not None else ""
         od = f'<span class="tp-odds">@{tp.get("odds")}</span>' if tp.get("odds") else ""
         tps += (f'<div class="tp"><div class="vp-h"><span class="tp-play">{esc(tp.get("play"))}</span>'
                 f'{od}{mp}</div>'
                 f'<div class="vp-why">{esc(tp.get("why",""))}</div></div>')
-    tps_block = f'<div class="traps"><div class="traps-l">陷阱点 · 避雷</div>{tps}</div>' if tps else ""
+    tps_block = f'<div class="traps"><div class="traps-l">要避开的坑</div>{tps}</div>' if tps else ""
+
+    # 防一手 · 平局：对"输赢明显/大热"或"势均力敌易平"的场，单独提醒平局风险（draw_guard）
+    dg = (a.get("draw_guard") if a else None) or None
+    dg_block = ""
+    if dg and dg.get("level"):
+        lv = dg.get("level", "")
+        lv_cls = "high" if "高" in lv else "mid"
+        dp = dg.get("draw_prob")
+        dp_txt = (f'<span class="dg-prob">平局概率约 {round(dp * 100)}%</span>'
+                  if isinstance(dp, (int, float)) else "")
+        sigs = "".join(f"<li>{esc(s)}</li>" for s in dg.get("signals", []))
+        sigs_html = f'<ul class="dg-sigs">{sigs}</ul>' if sigs else ""
+        hedge = (f'<div class="dg-hedge"><span class="dg-hl">防一手</span>{esc(dg.get("hedge", ""))}</div>'
+                 if dg.get("hedge") else "")
+        dg_block = (f'<div class="dg dg-{lv_cls}">'
+                    f'<div class="dg-h"><span class="dg-t">防一手 · 平局风险（{esc(lv)}）</span>{dp_txt}</div>'
+                    f'{sigs_html}{hedge}</div>')
 
     # 玩法倍率：胜平负常驻为"重点玩法"，其余折叠（折叠副标题按实际包含的玩法动态生成）
     key_html = ""
@@ -368,6 +385,7 @@ def render_match(idx, m, a, value_labels):
       {mls_block}
       {vps_block}
       {tps_block}
+      {dg_block}
       {key_block}
       {rest_html}
       {disc_block}
@@ -597,7 +615,7 @@ CSS = """
  --clay:#C2603F;--clay-d:#A2492E;--clay-t:#F6E7DD;
  --sage:#5E6B4F;--gold:#9A7A2C;
  --val-bg:#F8E9DE;--val-line:#E2B79B;
- --warn-bg:#F6EFD7;--warn-line:#DCC68A;
+ --warn-bg:#F6EFD7;--warn-line:#DCC68A;--danger:#B0413A;--danger-bg:#F7E3DF;--danger-line:#E0B3AC;
  --brand-mono:#26221A;
  --shadow:0 1px 2px rgba(40,33,20,.05),0 14px 34px -18px rgba(40,33,20,.22);
  --shadow-s:0 1px 2px rgba(40,33,20,.05);
@@ -614,7 +632,7 @@ CSS = """
  --clay:#D97757;--clay-d:#E2906F;--clay-t:#3A2A22;
  --sage:#9DB082;--gold:#D7AC5E;
  --val-bg:#33271E;--val-line:#57442F;
- --warn-bg:#2B2615;--warn-line:#4E4327;
+ --warn-bg:#2B2615;--warn-line:#4E4327;--danger:#E08A7D;--danger-bg:#2E1A16;--danger-line:#5A352E;
  --brand-mono:#ECEAE0;
  --shadow:0 1px 2px rgba(0,0,0,.4),0 18px 40px -20px rgba(0,0,0,.7);
  --shadow-s:0 1px 2px rgba(0,0,0,.35);
@@ -771,6 +789,22 @@ a{color:inherit}
 .tp-play{font-weight:600;font-size:14px}
 .tp-play:before{content:"▲";color:var(--gold);font-size:9px;margin-right:6px;vertical-align:1px}
 .tp-odds{color:var(--gold);font-variant-numeric:tabular-nums;font-weight:700}
+/* 防一手 · 平局风险（draw_guard）：高=红、中=琥珀 */
+.dg{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;border-radius:12px;padding:13px 16px;border:1px solid}
+.dg-mid{background:var(--warn-bg);border-color:var(--warn-line)}
+.dg-high{background:var(--danger-bg);border-color:var(--danger-line)}
+.dg-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.dg-t{font-size:13px;font-weight:700;letter-spacing:.02em}
+.dg-t:before{content:"⚠ ";font-size:12px}
+.dg-mid .dg-t{color:var(--gold)}
+.dg-high .dg-t{color:var(--danger)}
+.dg-prob{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.dg-sigs{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.dg-sigs li{font-size:12.5px;color:var(--ink2);line-height:1.5}
+.dg-hedge{font-size:12.5px;color:var(--ink);line-height:1.55;padding-top:8px;border-top:1px solid color-mix(in srgb,var(--ink) 10%,transparent)}
+.dg-hl{display:inline-block;font-size:11px;font-weight:700;color:#fff;border-radius:5px;padding:1px 7px;margin-right:7px;vertical-align:1px}
+.dg-mid .dg-hl{background:var(--gold)}
+.dg-high .dg-hl{background:var(--danger)}
 /* key market */
 .key-mkt{margin-bottom:14px}
 .key-mkt .mkt{border-color:var(--line2);box-shadow:var(--shadow-s)}
@@ -1006,7 +1040,7 @@ def build(merged, analysis, out, retro=None):
   {sections}
   <footer>
     <div class="disc">{esc(disclaimer)}</div>
-    数据来源：worldcup.lyihub.com（模型预测）· 竞彩实时倍率。去水概率 = (1/赔率) 在该玩法内归一化，仅供参考。
+    数据来源：worldcup.lyihub.com（模型预测）· 竞彩实时倍率。"真实概率"＝把赔率换算成概率、再扣掉庄家抽水后的结果，代表这个选项实际大概多大可能发生，仅供参考。
   </footer>
 </main>
 <script>{MAIN_JS}</script>
