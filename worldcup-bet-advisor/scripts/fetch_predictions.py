@@ -13,6 +13,7 @@
 字段细节见 references/data-sources.md。
 """
 import argparse
+import base64
 import json
 import sys
 import urllib.request
@@ -21,7 +22,8 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-BASE = "https://worldcup.lyihub.com/data"
+SITE = "https://worldcup.lyihub.com"
+BASE = f"{SITE}/data"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 
 # index 短键 / model_name 关键词 -> 统一厂牌
@@ -60,6 +62,32 @@ def load_match(mid, raw_dir):
     if raw_dir:
         return json.loads((Path(raw_dir) / f"{mid}.json").read_text(encoding="utf-8"))
     return get_json(f"{BASE}/matches/{mid}.json")
+
+
+_logo_cache = {}
+
+
+def fetch_logo_b64(team_id, enable=True):
+    """下载球队圆形徽标 assets/teams/{id}-logo-120.png 并转 base64 data URI（内联进报告，
+    保持离线+单文件）。失败或 enable=False（CDP 兜底/离线）时返回 None，报告降级为纯文字卡。
+    按 team_id 缓存，避免一次 run 内重复下载同一队。"""
+    if not enable or not team_id:
+        return None
+    tid = str(team_id)
+    if tid in _logo_cache:
+        return _logo_cache[tid]
+    data = None
+    try:
+        req = urllib.request.Request(f"{SITE}/assets/teams/{tid}-logo-120.png",
+                                     headers={"User-Agent": UA, "Referer": "https://worldcup.lyihub.com/"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            raw = r.read()
+        if raw:
+            data = "data:image/png;base64," + base64.b64encode(raw).decode("ascii")
+    except Exception as e:
+        print(f"[logo] {tid} 徽标抓取失败(降级纯文字): {e}", file=sys.stderr)
+    _logo_cache[tid] = data
+    return data
 
 
 # ---------- index 子命令 ----------
@@ -139,6 +167,7 @@ def cmd_matches(args):
         team_a = match.get("team_a")
         team_b = match.get("team_b")
         models = [extract_model(p, team_a, team_b) for p in j.get("llm_predict", [])]
+        net = not args.raw_dir  # CDP 兜底/离线时不走网络抓徽标，降级纯文字
         # 站点自带的简版赔率（仅 HHAD 一条），仅作参考；真实全玩法倍率来自 odds 侧
         result[mid] = {
             "match_id": mid,
@@ -146,6 +175,8 @@ def cmd_matches(args):
             "team_b": team_b,
             "team_a_id": match.get("team_a_id"),
             "team_b_id": match.get("team_b_id"),
+            "team_a_logo": fetch_logo_b64(match.get("team_a_id"), enable=net),  # base64 圆形徽标
+            "team_b_logo": fetch_logo_b64(match.get("team_b_id"), enable=net),
             "kickoff_at": match.get("kickoff_at"),
             "stage": match.get("stage"),
             "venue": match.get("venue"),

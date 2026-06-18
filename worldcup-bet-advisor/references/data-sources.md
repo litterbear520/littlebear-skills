@@ -23,6 +23,7 @@
   } ] }
 ```
 - "未开赛 + 有预测" = `has_predict==true 且 score==null` → 这是选场候选集。
+- **队徽**：`https://worldcup.lyihub.com/assets/teams/{team_a_id|team_b_id}-logo-120.png`（120px 圆形 PNG，约 5-6KB）。`fetch_predictions.py matches` 抓取时按 team id 下载并 base64 内联进 `predictions.json` 的 `team_a_logo`/`team_b_logo`，供报告"今日赛程"卡与比赛卡头部渲染（离线单文件；`--raw-dir` 兜底时不抓、降级纯文字）。
 - 注意 `bets` 里只列**下了注**的模型；像 Claude 可能写了讨论但 `暂无投注`，不会出现在 bets，但会出现在 `comment`。判断"哪些 agent 有讨论"应看 `comment` 的键（6 个模型几乎总是齐全）。
 
 ### 单场详情 `https://worldcup.lyihub.com/data/matches/{match_id}.json`

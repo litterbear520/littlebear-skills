@@ -18,15 +18,31 @@ import argparse
 import html
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from functools import reduce
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
+BEIJING = timezone(timedelta(hours=8))
+
 
 def esc(s):
     return html.escape(str(s)) if s is not None else ""
+
+
+def fmt_kickoff(iso, fmt="%m-%d %H:%M"):
+    """kickoff_at 是 UTC ISO（如 2026-06-17T17:00:00+00:00）；统一转北京时间(+8)显示，
+    与竞彩侧/截图一致。解析失败则退回原样切片。"""
+    if not iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(iso)
+        dt = dt.astimezone(BEIJING) if dt.tzinfo else dt + timedelta(hours=8)
+        return dt.strftime(fmt)
+    except Exception:
+        return str(iso).replace("T", " ")[:16]
 
 
 def conf_dots(n):
@@ -229,7 +245,7 @@ def rank_compare(m):
 def render_match(idx, m, a, value_labels):
     ta, tb = esc(m["team_a"]), esc(m["team_b"])
     lot = esc(m.get("lotteryid", ""))
-    ko = esc((m.get("kickoff_at") or "").replace("T", " ")[:16])
+    ko = esc(fmt_kickoff(m.get("kickoff_at")))  # 北京时间
     head = esc(a.get("headline", "")) if a else ""
     cons = esc(a.get("consensus", "")) if a else ""
 
@@ -343,7 +359,7 @@ def render_match(idx, m, a, value_labels):
     return f'''<section class="match reveal" id="m{idx}" style="animation-delay:{delay:.2f}s">
       <div class="m-top">
         <span class="m-id">{lot}</span>
-        <h2>{ta} <span class="vs">vs</span> {tb}</h2>
+        <h2>{team_logo_img(m.get("team_a_logo"), "m-logo")}{ta} <span class="vs">vs</span> {team_logo_img(m.get("team_b_logo"), "m-logo")}{tb}</h2>
         <div class="m-meta"><span class="ko">{ko}</span></div>
       </div>
       {rank_compare(m)}
@@ -537,6 +553,41 @@ def render_nav(order):
       </div></div></nav>'''
 
 
+def team_logo_img(logo, cls="sch-logo"):
+    """有 base64 徽标(team_*_logo)就渲染圆形 <img>，否则空圆占位——纯文字降级，不报错。"""
+    if logo:
+        return f'<img class="{cls}" src="{logo}" alt="" loading="lazy">'
+    return f'<span class="{cls} ph" aria-hidden="true"></span>'
+
+
+def render_schedule(order):
+    """标题下、三档方案上的"今日赛程"卡片栅格。每卡 = 队徽 + 队名 + 阶段 + 开赛(北京时间) + 排名，
+    整卡是 <a href="#mN"> 点击平滑跳到下方对应分析区（复用比赛卡锚点 + scroll-margin-top）。"""
+    if not order:
+        return ""
+    cards = ""
+    for i, m in enumerate(order, 1):
+        stage = esc(m.get("stage") or "赛程")
+        lot = esc(m.get("lotteryid") or "")
+        ko = esc(fmt_kickoff(m.get("kickoff_at"), "%H:%M"))
+        day = esc(fmt_kickoff(m.get("kickoff_at"), "%m-%d"))
+        rank = ""
+        if m.get("odds_matched") and m.get("homerank") and m.get("awayrank"):
+            rank = f'<span class="sch-rank">FIFA {esc(m.get("homerank"))} · {esc(m.get("awayrank"))}</span>'
+        foot = " · ".join(x for x in (lot, day) if x)
+        cards += f'''<a class="sch-card" href="#m{i}">
+          <div class="sch-top"><span class="sch-stage">{stage}</span><span class="sch-status">未开赛</span></div>
+          <div class="sch-mid">
+            <span class="sch-team">{team_logo_img(m.get("team_a_logo"))}<b>{esc(m["team_a"])}</b></span>
+            <span class="sch-ko">{ko}</span>
+            <span class="sch-team">{team_logo_img(m.get("team_b_logo"))}<b>{esc(m["team_b"])}</b></span>
+          </div>
+          <div class="sch-foot"><span>{foot}</span>{rank}</div></a>'''
+    return f'''<section class="schedule"><div class="sch-h"><h2>今日赛程</h2>
+      <span class="sch-sub">点击任意比赛跳到下方分析 · 北京时间</span></div>
+      <div class="sch-grid">{cards}</div></section>'''
+
+
 CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -658,7 +709,28 @@ a{color:inherit}
 .dots{color:var(--pa);font-size:10px;letter-spacing:2px}.dots-o{color:var(--line2)}
 .tp-note{font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line2);padding-top:14px;margin-top:22px;line-height:1.55}
 .tp-pnote{grid-column:1/-1;margin-top:-4px}
+/* 今日赛程总览 */
+.schedule{margin-bottom:30px}
+.sch-h{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.sch-h h2{font-family:"Fraunces",Georgia,serif;font-size:20px;font-weight:600}
+.sch-sub{font-size:12px;color:var(--muted)}
+.sch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:13px}
+.sch-card{display:flex;flex-direction:column;gap:11px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 15px;text-decoration:none;color:inherit;box-shadow:var(--shadow-s);transition:transform .16s,border-color .16s,box-shadow .16s}
+.sch-card:hover{transform:translateY(-2px);border-color:var(--clay);box-shadow:var(--shadow)}
+.sch-top{display:flex;justify-content:space-between;align-items:center}
+.sch-stage{font-size:11px;color:var(--clay-d);font-weight:600;letter-spacing:.02em}
+.sch-status{font-size:10.5px;color:var(--muted);border:1px solid var(--line2);border-radius:20px;padding:2px 9px}
+.sch-mid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.sch-team{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;text-align:center}
+.sch-team b{font-size:13px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.sch-logo{width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--paper2);border:1px solid var(--line)}
+.sch-logo.ph{display:inline-block}
+.sch-ko{font-family:"Fraunces",Georgia,serif;font-size:18px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.sch-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:9px}
+.sch-rank{font-variant-numeric:tabular-nums;color:var(--ink2);background:var(--paper2);border:1px solid var(--line);border-radius:20px;padding:1px 8px}
 /* match */
+.m-logo{width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:-6px;background:var(--paper2);border:1px solid var(--line);margin-right:7px}
+.m-logo.ph{display:inline-block}
 .match{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:72px}
 .m-top{display:flex;align-items:center;gap:13px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:18px}
 .m-id{font-size:11.5px;color:var(--panel);background:var(--ink);padding:4px 10px;border-radius:7px;letter-spacing:.04em;font-weight:600}
@@ -928,6 +1000,7 @@ def build(merged, analysis, out, retro=None):
 </div></header>
 {render_nav(order)}
 <main class="wrap">
+  {render_schedule(order)}
   {render_plans(analysis.get("plans") if analysis else None)}
   {render_retro(retro)}
   {sections}

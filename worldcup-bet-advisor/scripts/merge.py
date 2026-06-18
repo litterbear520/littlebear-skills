@@ -97,6 +97,8 @@ def cmd(args):
         entry = {
             "match_id": mid,
             "team_a": ta, "team_b": tb,
+            "team_a_id": p.get("team_a_id"), "team_b_id": p.get("team_b_id"),
+            "team_a_logo": p.get("team_a_logo"), "team_b_logo": p.get("team_b_logo"),  # base64 徽标(可为 None)
             "kickoff_at": p.get("kickoff_at"),
             "stage": p.get("stage"),
             "models": models,
