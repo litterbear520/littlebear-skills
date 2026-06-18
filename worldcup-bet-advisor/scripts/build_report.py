@@ -207,11 +207,27 @@ def score_block(score_mk, single_flag, value_labels):
 
 
 # ---------- 比赛卡 ----------
+def rank_compare(m):
+    """FIFA 排名对比条：主/客分列两端，更强的一侧(排名数字更小)高亮，中间用文字点出差距，
+    让强弱悬殊一眼可见。排名缺失/非数字则降级为空(不渲染)。"""
+    if not m.get("odds_matched"):
+        return ""
+    try:
+        hr, ar = int(m.get("homerank")), int(m.get("awayrank"))
+    except (TypeError, ValueError):
+        return ""
+    gap = abs(hr - ar)
+    gtxt = "实力接近" if gap <= 5 else (f"相差 {gap} 位" if gap <= 20 else f"实力悬殊 · 差 {gap} 位")
+    hcls = " strong" if hr < ar else ""
+    acls = " strong" if ar < hr else ""
+    return (f'<div class="rankcmp" title="FIFA 排名数字越小越强">'
+            f'<span class="rk{hcls}"><i>FIFA</i><b>{hr}</b></span>'
+            f'<span class="rk-gap">{gtxt}</span>'
+            f'<span class="rk{acls}"><i>FIFA</i><b>{ar}</b></span></div>')
+
+
 def render_match(idx, m, a, value_labels):
     ta, tb = esc(m["team_a"]), esc(m["team_b"])
-    rk = ""
-    if m.get("odds_matched"):
-        rk = f'<span class="rank">FIFA {esc(m.get("homerank","?"))} · {esc(m.get("awayrank","?"))}</span>'
     lot = esc(m.get("lotteryid", ""))
     ko = esc((m.get("kickoff_at") or "").replace("T", " ")[:16])
     head = esc(a.get("headline", "")) if a else ""
@@ -252,9 +268,19 @@ def render_match(idx, m, a, value_labels):
                  f'{esc(mod["lean"])} <i>({esc(bet)})</i></span>')
     foot_block = f'<div class="foot"><span class="foot-l">其他模型</span>{foot}</div>' if foot else ""
 
-    # 最可能比分 + 价值点
-    mls = "".join(f'<span class="ml">{esc(s)}</span>' for s in (a.get("most_likely_scores", []) if a else []))
-    mls_block = f'<div class="ml-row"><span class="ml-l">最可能比分</span>{mls}</div>' if mls else ""
+    # 最可能比分（双口径并排）：模型看好(陶土橘) vs 市场去水 top(中性+概率)，
+    # 让用户一眼看出模型是不是在赌大胜——市场口径来自 merge.py 已算好的 score.top。
+    model_scores = a.get("most_likely_scores", []) if a else []
+    mls = "".join(f'<span class="ml">{esc(s)}</span>' for s in model_scores)
+    mkt_top = (((m.get("markets") or {}).get("score") or {}).get("top") or [])
+    mkt = "".join(f'<span class="ml mkt">{esc(o["label"])}<i>{fp(o["fair_prob"])}</i></span>'
+                  for o in mkt_top[:3] if o.get("fair_prob") is not None)
+    mls_block = ""
+    if mls or mkt:
+        model_grp = f'<span class="ml-l">模型看好</span>{mls}' if mls else ""
+        mkt_grp = f'<span class="ml-l ml-l2">市场去水</span>{mkt}' if mkt else ""
+        mls_block = (f'<div class="ml-row"><span class="ml-cap">最可能比分</span>'
+                     f'{model_grp}{mkt_grp}</div>')
     vps = ""
     for vp in (a.get("value_points", []) if a else []):
         mp = f'<span class="vp-mk">市场仅 {fp(vp["market_prob"])}</span>' if vp.get("market_prob") is not None else ""
@@ -318,8 +344,9 @@ def render_match(idx, m, a, value_labels):
       <div class="m-top">
         <span class="m-id">{lot}</span>
         <h2>{ta} <span class="vs">vs</span> {tb}</h2>
-        <div class="m-meta">{rk}<span class="ko">{ko}</span></div>
+        <div class="m-meta"><span class="ko">{ko}</span></div>
       </div>
+      {rank_compare(m)}
       {f'<p class="headline">{head}</p>' if head else ''}
       {f'<p class="consensus">{cons}</p>' if cons else ''}
       {mls_block}
@@ -638,12 +665,24 @@ a{color:inherit}
 .m-top h2{font-size:25px;flex:1;min-width:200px}
 .vs{color:var(--muted);font-size:15px;font-style:italic;margin:0 4px}
 .m-meta{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--muted)}
-.rank{background:var(--paper2);border:1px solid var(--line);padding:3px 10px;border-radius:20px;font-variant-numeric:tabular-nums}
+.rankcmp{display:flex;align-items:center;gap:12px;margin:-4px 0 16px;font-variant-numeric:tabular-nums}
+.rankcmp .rk{display:inline-flex;align-items:baseline;gap:6px;padding:4px 13px;border-radius:9px;background:var(--paper2);border:1px solid var(--line);color:var(--muted)}
+.rankcmp .rk i{font-style:normal;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.rankcmp .rk b{font-size:18px;color:var(--ink2);font-family:"Fraunces",Georgia,serif;line-height:1}
+.rankcmp .rk.strong{background:var(--clay-t);border-color:var(--clay);color:var(--clay-d)}
+.rankcmp .rk.strong b{color:var(--clay-d)}
+.rankcmp .rk-gap{flex:1;text-align:center;font-size:11.5px;letter-spacing:.04em;color:var(--muted);position:relative}
+.rankcmp .rk-gap:before,.rankcmp .rk-gap:after{content:"";position:absolute;top:50%;width:16%;height:1px;background:var(--line2)}
+.rankcmp .rk-gap:before{left:7%}.rankcmp .rk-gap:after{right:7%}
 .headline{font-family:"Fraunces",Georgia,serif;font-size:19px;line-height:1.45;margin-bottom:8px;color:var(--ink)}
 .consensus{font-size:13.5px;color:var(--ink2);margin-bottom:18px;line-height:1.65;max-width:75ch}
 .ml-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.ml-cap{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);font-weight:700;margin-right:2px}
 .ml-l{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.ml-l2{margin-left:8px;padding-left:10px;border-left:1px solid var(--line2)}
 .ml{font-family:"Fraunces",Georgia,serif;font-size:15px;background:var(--clay-t);color:var(--clay-d);padding:3px 12px;border-radius:7px;font-weight:600}
+.ml.mkt{background:var(--paper2);border:1px solid var(--line);color:var(--ink2);font-weight:600}
+.ml.mkt i{font-style:normal;font-size:11px;color:var(--muted);margin-left:6px;font-family:system-ui,-apple-system,sans-serif;font-weight:500}
 /* value points */
 .vps{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
 .vps-l{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--clay-d);font-weight:700}
