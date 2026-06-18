@@ -499,6 +499,48 @@ def render_plans(plans):
             f'<div class="tabs-head" role="tablist">{heads}</div>{panels}</div></div>')
 
 
+# ---------- 最有可能的爆冷（博冷雷达，放三档方案下面、复盘上面） ----------
+def _upset_card(p, kind):
+    """kind: 'primary' 首选 / 'alt' 备选。p 缺 play 则不渲染。"""
+    if not isinstance(p, dict) or not p.get("play"):
+        return ""
+    rank = "首选" if kind == "primary" else "备选"
+    match = f'<span class="up-match">{esc(p["match"])}</span>' if p.get("match") else ""
+    typ = f'<span class="up-type">{esc(p["type"])}</span>' if p.get("type") else ""
+    conf = (f'<span class="up-conf">{conf_dots(p.get("confidence"))}</span>'
+            if p.get("confidence") is not None else "")
+    odds = f'<span class="up-odds">@{p.get("odds")}</span>' if p.get("odds") not in (None, "") else ""
+    why = f'<div class="up-why">{esc(p.get("why",""))}</div>' if p.get("why") else ""
+    basis = (f'<div class="up-basis"><span class="up-bl">依据</span>{esc(p["history_basis"])}</div>'
+             if p.get("history_basis") else "")
+    return (f'<div class="up-pick up-{kind}">'
+            f'<div class="up-pk-top"><span class="up-rank">{rank}</span>{match}{typ}{conf}</div>'
+            f'<div class="up-play-row"><span class="up-play">{esc(p.get("play"))}</span>{odds}</div>'
+            f'{why}{basis}</div>')
+
+
+def render_upset(up):
+    """爆冷雷达：综合本届爆冷史 + 嘉豪冷剧本 + form，给今日最可能爆冷的首选 + 备选。"""
+    if not isinstance(up, dict):
+        return ""
+    primary_html = _upset_card(up.get("primary"), "primary")
+    if not primary_html:   # 没有首选就不渲染整块（fail-open，没冷点就别硬凑）
+        return ""
+    alt_html = _upset_card(up.get("alt"), "alt")
+    base = esc(up.get("tournament_upsets", "") or "")
+    base_html = f'<p class="up-base">{base}</p>' if base else ""
+    note = esc(up.get("note", "") or "")
+    note_html = f'<p class="up-note">{note}</p>' if note else ""
+    return (f'<section class="upset reveal">'
+            f'<div class="up-head"><span class="up-k">⚡ 博冷雷达</span>'
+            f'<h2 class="up-title">最有可能的爆冷</h2></div>'
+            f'{base_html}'
+            f'<div class="up-picks">{primary_html}{alt_html}</div>'
+            f'{note_html}'
+            f'<div class="up-disc">爆冷天生低命中，押冷靠的是赔率价值——只配小注、别当主力，宁可空也别梭。</div>'
+            f'</section>')
+
+
 # ---------- 复盘模块（上期回顾，放三档方案下面） ----------
 def render_retro(retro):
     if not retro:
@@ -630,6 +672,7 @@ CSS = """
  --sage:#5E6B4F;--gold:#9A7A2C;
  --val-bg:#F8E9DE;--val-line:#E2B79B;
  --warn-bg:#F6EFD7;--warn-line:#DCC68A;--danger:#B0413A;--danger-bg:#F7E3DF;--danger-line:#E0B3AC;
+ --upset:#9A4F63;--upset-d:#7E3E50;--upset-t:#F3E6EA;--upset-line:#DCBFC8;
  --brand-mono:#26221A;
  --shadow:0 1px 2px rgba(40,33,20,.05),0 14px 34px -18px rgba(40,33,20,.22);
  --shadow-s:0 1px 2px rgba(40,33,20,.05);
@@ -647,6 +690,7 @@ CSS = """
  --sage:#9DB082;--gold:#D7AC5E;
  --val-bg:#33271E;--val-line:#57442F;
  --warn-bg:#2B2615;--warn-line:#4E4327;--danger:#E08A7D;--danger-bg:#2E1A16;--danger-line:#5A352E;
+ --upset:#CE8DA0;--upset-d:#DCA6B5;--upset-t:#2C1D24;--upset-line:#503641;
  --brand-mono:#ECEAE0;
  --shadow:0 1px 2px rgba(0,0,0,.4),0 18px 40px -20px rgba(0,0,0,.7);
  --shadow-s:0 1px 2px rgba(0,0,0,.35);
@@ -822,12 +866,40 @@ a{color:inherit}
 /* 本届走势 · 真实战况（联网搜到的实际表现，不只比分）：中性纸感 + 墨色左轴，区别于价值/陷阱/防平的彩色块 */
 .forms{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
 .forms-l{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);font-weight:700}
-.fm{border:1px solid var(--line2);background:var(--paper2);border-radius:11px;padding:11px 14px;border-left:3px solid var(--ink2)}
+.fm{border:1px solid var(--line2);background:var(--paper2);border-radius:11px;padding:11px 14px}
 .fm-top{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:3px}
 .fm-team{font-weight:700;font-size:13.5px;color:var(--ink)}
 .fm-last{font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink2);font-family:"Fraunces",Georgia,serif}
 .fm-src{font-size:10.5px;color:var(--muted);margin-left:auto;border:1px solid var(--line);border-radius:20px;padding:1px 8px}
 .fm-read{font-size:12.5px;color:var(--ink2);line-height:1.55}
+/* 最有可能的爆冷（博冷雷达）：三档下方独立高亮块；酒红/梅子强调色——区别于三档(绿/金/陶土)与红色危险，反共识押冷的调性 */
+.upset{--pa:var(--upset);background:var(--panel);border:1px solid var(--upset-line);border-radius:var(--r);box-shadow:var(--shadow);margin:0 0 50px;padding:23px 26px 21px}
+.up-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.up-k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--upset-d);background:var(--upset-t);padding:3px 10px;border-radius:7px;font-weight:700;flex:none}
+.up-title{font-family:"Fraunces",Georgia,serif;font-size:20px;font-weight:600;color:var(--ink)}
+.up-base{font-size:12.5px;color:var(--ink2);line-height:1.6;margin:9px 0 16px;max-width:78ch}
+.up-picks{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.up-pick{border:1px solid var(--upset-line);border-radius:12px;padding:15px 17px;background:var(--upset-t)}
+.up-alt{background:var(--panel2);border-color:var(--line2)}
+.up-pk-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+.up-rank{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:#fff;background:var(--upset);padding:2px 9px;border-radius:6px;flex:none}
+[data-theme="dark"] .up-rank{color:#1c1216}
+.up-alt .up-rank{background:var(--muted)}
+.up-match{font-size:12px;color:var(--ink2);font-weight:600}
+.up-type{font-size:10.5px;color:var(--upset-d);border:1px solid var(--upset-line);border-radius:20px;padding:1px 9px;font-weight:600}
+.up-alt .up-type{color:var(--muted);border-color:var(--line2)}
+.up-conf{margin-left:auto}
+.up-play-row{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-bottom:8px}
+.up-play{font-family:"Fraunces",Georgia,serif;font-size:18px;font-weight:600;color:var(--ink);line-height:1.25}
+.up-odds{font-variant-numeric:tabular-nums;font-weight:700;font-size:16px;color:var(--upset-d)}
+.up-alt .up-odds{color:var(--ink2)}
+.up-why{font-size:12.5px;color:var(--ink2);line-height:1.55}
+.up-basis{font-size:11.5px;color:var(--muted);margin-top:9px;padding-top:9px;border-top:1px dashed var(--line2);line-height:1.5}
+.up-bl{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--upset-d);margin-right:7px}
+.up-alt .up-bl{color:var(--muted)}
+.up-note{font-size:12.5px;color:var(--ink2);line-height:1.6;margin-top:15px}
+.up-disc{font-size:11.5px;color:var(--muted);margin-top:13px;border-top:1px dashed var(--line2);padding-top:11px;line-height:1.5}
+@media(max-width:680px){.up-picks{grid-template-columns:1fr}}
 /* key market */
 .key-mkt{margin-bottom:14px}
 .key-mkt .mkt{border-color:var(--line2);box-shadow:var(--shadow-s)}
@@ -1059,6 +1131,7 @@ def build(merged, analysis, out, retro=None):
 <main class="wrap">
   {render_schedule(order)}
   {render_plans(analysis.get("plans") if analysis else None)}
+  {render_upset(analysis.get("upset_pick") if analysis else None)}
   {render_retro(retro)}
   {sections}
   <footer>
