@@ -331,6 +331,19 @@ def render_match(idx, m, a, value_labels):
                     f'<div class="dg-h"><span class="dg-t">防一手 · 平局风险（{esc(lv)}）</span>{dp_txt}</div>'
                     f'{sigs_html}{hedge}</div>')
 
+    # 本届走势 · 真实战况：联网搜到的该队本届此前实际表现（不只比分），喂判断也摆给用户看
+    forms = (a.get("form") if a else None) or []
+    form_items = ""
+    for fm in forms:
+        if not isinstance(fm, dict) or not (fm.get("team") or fm.get("read")):
+            continue
+        last = f'<span class="fm-last">{esc(fm["last"])}</span>' if fm.get("last") else ""
+        src = f'<span class="fm-src">{esc(fm["src"])}</span>' if fm.get("src") else ""
+        form_items += (f'<div class="fm"><div class="fm-top"><span class="fm-team">{esc(fm.get("team",""))}</span>'
+                       f'{last}{src}</div><div class="fm-read">{esc(fm.get("read",""))}</div></div>')
+    form_block = (f'<div class="forms"><div class="forms-l">本届走势 · 真实战况</div>{form_items}</div>'
+                  if form_items else "")
+
     # 玩法倍率：胜平负常驻为"重点玩法"，其余折叠（折叠副标题按实际包含的玩法动态生成）
     key_html = ""
     rest_html = ""
@@ -382,6 +395,7 @@ def render_match(idx, m, a, value_labels):
       {rank_compare(m)}
       {f'<p class="headline">{head}</p>' if head else ''}
       {f'<p class="consensus">{cons}</p>' if cons else ''}
+      {form_block}
       {mls_block}
       {vps_block}
       {tps_block}
@@ -805,6 +819,15 @@ a{color:inherit}
 .dg-hl{display:inline-block;font-size:11px;font-weight:700;color:#fff;border-radius:5px;padding:1px 7px;margin-right:7px;vertical-align:1px}
 .dg-mid .dg-hl{background:var(--gold)}
 .dg-high .dg-hl{background:var(--danger)}
+/* 本届走势 · 真实战况（联网搜到的实际表现，不只比分）：中性纸感 + 墨色左轴，区别于价值/陷阱/防平的彩色块 */
+.forms{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.forms-l{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);font-weight:700}
+.fm{border:1px solid var(--line2);background:var(--paper2);border-radius:11px;padding:11px 14px;border-left:3px solid var(--ink2)}
+.fm-top{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:3px}
+.fm-team{font-weight:700;font-size:13.5px;color:var(--ink)}
+.fm-last{font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink2);font-family:"Fraunces",Georgia,serif}
+.fm-src{font-size:10.5px;color:var(--muted);margin-left:auto;border:1px solid var(--line);border-radius:20px;padding:1px 8px}
+.fm-read{font-size:12.5px;color:var(--ink2);line-height:1.55}
 /* key market */
 .key-mkt{margin-bottom:14px}
 .key-mkt .mkt{border-color:var(--line2);box-shadow:var(--shadow-s)}
