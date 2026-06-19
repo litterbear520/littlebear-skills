@@ -6,7 +6,8 @@
 
 特性：
 - 双主题（亮/暗），跟随系统、可手动切换并记忆（localStorage），<head> 内联防闪白。
-- 顶部吸顶导航：比赛跳转 chips + 主题切换 + 导出 PDF；滚动高亮当前比赛。
+- 左侧文档大纲目录：大块（赛程/三档/博冷/复盘）+ 逐场（开赛时间+全名）跳转 + 主题切换 + 导出 PDF；
+  滚动高亮当前所在节；宽屏常驻、窄屏收成 ☰ 目录抽屉。
 - 渐进披露：每场常驻"结论卡 + 重点玩法（胜平负）"，全部赔率表 / 模型讨论默认折叠。
 - 模型品牌图标（内联 SVG，零网络依赖，主题自适应）。
 - PDF 导出：window.print() + @media print（自动展开折叠、隐藏导航/按钮、A4 分页、强制浅色）。
@@ -495,7 +496,7 @@ def render_plans(plans):
                    f'<p class="tp-sub">{esc(sub)}</p>'
                    f'{body}{note_html}</div>')
 
-    return (f'<div class="plans-tabs reveal"><div class="tabs">'
+    return (f'<div class="plans-tabs reveal" id="plans"><div class="tabs">'
             f'<div class="tabs-head" role="tablist">{heads}</div>{panels}</div></div>')
 
 
@@ -531,7 +532,7 @@ def render_upset(up):
     base_html = f'<p class="up-base">{base}</p>' if base else ""
     note = esc(up.get("note", "") or "")
     note_html = f'<p class="up-note">{note}</p>' if note else ""
-    return (f'<section class="upset reveal">'
+    return (f'<section class="upset reveal" id="upset">'
             f'<div class="up-head"><span class="up-k">⚡ 博冷雷达</span>'
             f'<h2 class="up-title">最有可能的爆冷</h2></div>'
             f'{base_html}'
@@ -606,25 +607,46 @@ def render_retro(retro):
                  if synced else "")
 
     body = f"{sum_html}{rows_html}{plans_html}{cal_html}{big_html}{sig_html}{adj_html}{sync_html}"
-    return (f'<details class="retro reveal" open><summary>'
+    return (f'<details class="retro reveal" id="retro" open><summary>'
             f'<span class="retro-k">复盘</span>'
             f'<span class="retro-t">上期复盘回顾 · {rdate}</span>'
             f'<span class="retro-hint">点按折叠/展开</span></summary>'
             f'<div class="retro-body">{body}</div></details>')
 
 
-def render_nav(order):
+def render_nav(order, sections):
+    """左侧文档大纲目录栏：先列在场的大块（赛程/三档/博冷/复盘），再逐场。
+    sections = [(anchor_id, label), ...]（只含本报告实际存在的大块）。
+    宽屏常驻、窄屏收成 ☰ 目录抽屉（JS 控制 .open + 遮罩）。滚动高亮见 MAIN_JS。"""
+    secs = "".join(f'<a href="#{sid}" class="nj-sec">{esc(lab)}</a>' for sid, lab in sections)
     jumps = ""
     for i, m in enumerate(order, 1):
-        short = f'{esc(m["team_a"][:2])}/{esc(m["team_b"][:2])}'
-        jumps += f'<a href="#m{i}">{short}</a>'
-    return f'''<nav class="topbar"><div class="wrap nav-in">
-      <div class="nav-jump">{jumps}</div>
-      <div class="nav-act">
-        <button id="themeBtn" class="nbtn" type="button" aria-label="切换深浅色">
-          <span class="ti" aria-hidden="true"></span><span class="tlabel"></span></button>
-        <button id="pdfBtn" class="nbtn primary" type="button"><span aria-hidden="true">⤓</span> 导出 PDF</button>
-      </div></div></nav>'''
+        ko = esc(fmt_kickoff(m.get("kickoff_at"), "%H:%M"))
+        jumps += (f'<a href="#m{i}" class="nj-match"><span class="nj-ko">{ko}</span>'
+                  f'<span class="nj-nm">{esc(m["team_a"])}<i> / </i>{esc(m["team_b"])}</span></a>')
+    match_label = '<div class="nj-label">逐场分析</div>' if jumps else ""
+    # 图标：panel = 展开（浮动钮）；chevron« = 收起（侧栏内）
+    panel_icon = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+                  'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                  '<rect x="3" y="4.5" width="18" height="15" rx="2.5"/>'
+                  '<line x1="9.4" y1="4.5" x2="9.4" y2="19.5"/></svg>')
+    chev_icon = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+                 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                 '<polyline points="14.5 6.5 9 12 14.5 17.5"/></svg>')
+    return f'''<button class="toc-toggle" id="tocToggle" type="button" aria-label="展开目录" title="目录">{panel_icon}</button>
+<div class="toc-scrim" id="tocScrim"></div>
+<nav class="sidebar" id="toc" aria-label="报告目录">
+  <div class="sb-head">
+    <div class="sb-brand"><span class="sb-k">World Cup 2026</span><span class="sb-t">玩法分析</span></div>
+    <button class="sb-collapse" id="tocCollapse" type="button" aria-label="收起目录" title="收起目录">{chev_icon}</button>
+  </div>
+  <div class="nav-jump">{secs}{match_label}{jumps}</div>
+  <div class="nav-act">
+    <button id="themeBtn" class="nbtn" type="button" aria-label="切换深浅色">
+      <span class="ti" aria-hidden="true"></span><span class="tlabel"></span></button>
+    <button id="pdfBtn" class="nbtn primary" type="button"><span aria-hidden="true">⤓</span> 导出 PDF</button>
+  </div>
+</nav>'''
 
 
 def team_logo_img(logo, cls="sch-logo"):
@@ -657,7 +679,7 @@ def render_schedule(order):
             <span class="sch-team">{team_logo_img(m.get("team_b_logo"))}<b>{esc(m["team_b"])}</b></span>
           </div>
           <div class="sch-foot"><span>{foot}</span>{rank}</div></a>'''
-    return f'''<section class="schedule"><div class="sch-h"><h2>今日赛程</h2>
+    return f'''<section class="schedule" id="sched"><div class="sch-h"><h2>今日赛程</h2>
       <span class="sch-sub">点击任意比赛跳到下方分析 · 北京时间</span></div>
       <div class="sch-grid">{cards}</div></section>'''
 
@@ -665,6 +687,7 @@ def render_schedule(order):
 CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
+ color-scheme:light;
  --paper:#FAF8F3;--paper2:#F1EBDD;--panel:#FFFFFF;--panel2:#FBF8F1;
  --ink:#1A1813;--ink2:#574F40;--muted:#928873;
  --line:#E8E1D1;--line2:#D7CDB8;
@@ -679,6 +702,7 @@ CSS = """
  --r:16px;--rs:11px;
 }
 [data-theme="dark"]{
+ color-scheme:dark;
  /* 对齐 claude.ai 官网深色 token（从站点实采）：
     画布 bg-100 #1F1F1E（暖中性炭灰、饱和仅~2%，非近黑非橄榄），
     卡片靠"提亮"做层次→ bg-000 #2C2C2A（比画布更亮），凹陷面 bg-200 #181816，
@@ -698,12 +722,15 @@ CSS = """
 html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
 body{background:var(--paper);color:var(--ink);
  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
- font-feature-settings:"tnum";line-height:1.6;padding:0 0 70px;position:relative}
+ font-feature-settings:"tnum";line-height:1.6;padding:0 0 70px;position:relative;
+ transition:padding-left .28s cubic-bezier(.4,0,.2,1)}
 .bg{position:fixed;inset:0;z-index:-1;pointer-events:none;
  background:
   radial-gradient(58% 42% at 78% -6%, color-mix(in srgb,var(--clay) 12%,transparent), transparent 70%),
   radial-gradient(46% 38% at -8% 4%, color-mix(in srgb,var(--sage) 10%,transparent), transparent 70%)}
 .wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+main.wrap{padding-top:26px}
+.schedule,.plans-tabs,.upset,.retro{scroll-margin-top:22px}
 h1,h2,h3,.serif{font-family:"Fraunces",Georgia,"Songti SC",serif;font-weight:500;letter-spacing:-.012em}
 .num,td.num,th.num{font-variant-numeric:tabular-nums;text-align:right}
 a{color:inherit}
@@ -719,15 +746,52 @@ a{color:inherit}
 .meta-row b{color:var(--ink2);font-weight:600}
 .agent-tags{display:inline-flex;gap:7px;vertical-align:middle}
 .atag{display:inline-flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:2px 10px 2px 4px;font-size:12.5px;font-weight:600;color:var(--ink);box-shadow:var(--shadow-s)}
-/* topbar */
-.topbar{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:saturate(140%) blur(12px);-webkit-backdrop-filter:saturate(140%) blur(12px);border-bottom:1px solid var(--line);margin-bottom:34px}
-.nav-in{display:flex;align-items:center;justify-content:space-between;gap:14px;height:52px}
-.nav-jump{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
-.nav-jump::-webkit-scrollbar{display:none}
-.nav-jump a{flex:none;font-size:13px;font-weight:600;color:var(--muted);text-decoration:none;padding:6px 11px;border-radius:9px;letter-spacing:.01em;transition:.18s}
-.nav-jump a:hover{color:var(--ink);background:var(--paper2)}
-.nav-jump a.on{color:var(--clay-d);background:var(--clay-t)}
-.nav-act{display:flex;gap:9px;flex:none}
+/* sidebar — 左侧文档大纲目录（宽屏常驻 / 窄屏收成抽屉） */
+.sidebar{position:fixed;top:0;left:0;width:248px;height:100vh;z-index:60;display:flex;flex-direction:column;
+ background:color-mix(in srgb,var(--paper) 92%,var(--panel));border-right:1px solid var(--line);padding:22px 14px 16px;overflow:hidden;
+ transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.sb-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:0 4px 14px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.sb-brand{display:flex;flex-direction:column;gap:3px;min-width:0;padding-left:4px}
+.sb-collapse{flex:none;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--ink2);cursor:pointer;box-shadow:var(--shadow-s);transition:background .16s,color .16s,border-color .16s,transform .16s}
+.sb-collapse:hover{background:var(--paper2);color:var(--clay-d);border-color:var(--clay);transform:translateY(-1px)}
+.sb-collapse svg{width:18px;height:18px}
+.sb-k{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--clay-d);font-weight:600}
+.sb-t{font-family:"Fraunces",Georgia,serif;font-size:18px;font-weight:600;color:var(--ink)}
+.nav-jump{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-right:2px;scrollbar-width:thin}
+.nav-jump::-webkit-scrollbar{width:6px}
+.nav-jump::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+.nav-jump a{position:relative;display:flex;align-items:baseline;gap:9px;text-decoration:none;color:var(--ink2);font-size:13px;line-height:1.35;padding:7px 10px;border-radius:9px;border-left:2px solid transparent;transition:background .16s,color .16s,border-color .16s}
+.nav-jump a:hover{background:var(--paper2);color:var(--ink)}
+.nav-jump a.on{background:var(--clay-t);color:var(--clay-d);border-left-color:var(--clay)}
+.nj-sec{font-weight:700}
+.nj-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:14px 10px 5px;margin-top:6px;border-top:1px dashed var(--line2)}
+.nj-match .nj-ko{flex:none;min-width:38px;font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--muted);font-family:"Fraunces",Georgia,serif}
+.nav-jump a.on .nj-ko{color:var(--clay-d)}
+.nj-nm{min-width:0;font-weight:600}
+.nj-nm i{font-style:normal;color:var(--muted)}
+.nav-act{display:flex;gap:8px;padding-top:14px;margin-top:8px;border-top:1px solid var(--line)}
+.nav-act .nbtn{flex:1;justify-content:center}
+/* 浮动展开钮（收起后出现，左上角；图标式，克制优雅）*/
+.toc-toggle{display:none;position:fixed;top:16px;left:16px;z-index:70;width:38px;height:38px;align-items:center;justify-content:center;padding:0;border:1px solid var(--line2);border-radius:11px;background:var(--panel);color:var(--ink2);cursor:pointer;box-shadow:var(--shadow);transition:color .16s,border-color .16s,transform .16s}
+.toc-toggle:hover{color:var(--clay-d);border-color:var(--clay);transform:translateY(-1px)}
+.toc-toggle svg{width:20px;height:20px}
+.toc-scrim{display:none}
+/* 宽屏：侧栏常驻、内容右让；收起后侧栏滑出、内容铺满、浮动钮浮现 */
+@media(min-width:1101px){
+ body{padding-left:248px}
+ html.toc-collapsed body{padding-left:0}
+ html.toc-collapsed .sidebar{transform:translateX(-100%)}
+ html.toc-collapsed .toc-toggle{display:inline-flex}
+}
+/* 窄屏：侧栏默认收进屏外，☰ 浮动钮唤出抽屉 + 遮罩 */
+@media(max-width:1100px){
+ .sidebar{transform:translateX(-100%);width:272px}
+ html.toc-open .sidebar{transform:none;box-shadow:0 24px 60px -18px rgba(0,0,0,.5)}
+ .toc-toggle{display:inline-flex}
+ html.toc-open .toc-toggle{display:none}
+ .toc-scrim{display:block;position:fixed;inset:0;z-index:55;background:rgba(20,16,10,.42);opacity:0;pointer-events:none;transition:opacity .26s}
+ html.toc-open .toc-scrim{opacity:1;pointer-events:auto}
+}
 .nbtn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);padding:7px 13px;border-radius:10px;transition:.18s;box-shadow:var(--shadow-s)}
 .nbtn:hover{border-color:var(--clay);color:var(--clay-d);transform:translateY(-1px)}
 .nbtn.primary{background:var(--clay);border-color:var(--clay);color:#fff}
@@ -807,7 +871,7 @@ a{color:inherit}
 /* match */
 .m-logo{width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:-6px;background:var(--paper2);border:1px solid var(--line);margin-right:7px}
 .m-logo.ph{display:inline-block}
-.match{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:72px}
+.match{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:28px;margin-bottom:22px;box-shadow:var(--shadow);scroll-margin-top:22px}
 .m-top{display:flex;align-items:center;gap:13px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:18px}
 .m-id{font-size:11.5px;color:var(--panel);background:var(--ink);padding:4px 10px;border-radius:7px;letter-spacing:.04em;font-weight:600}
 .m-top h2{font-size:25px;flex:1;min-width:200px}
@@ -1032,7 +1096,8 @@ footer{margin-top:42px;padding-top:24px;border-top:1px solid var(--line2);color:
   --warn-bg:#f6eed4;--warn-line:#d8c184;
   --shadow:none;--shadow-s:none}
  body{background:#fff;padding:0}
- .bg,.topbar,.nav-act,.no-print{display:none!important}
+ .bg,.sidebar,.toc-toggle,.toc-scrim,.no-print{display:none!important}
+ body{padding-left:0!important}
  .hero{padding:0 0 14px}.wrap{max-width:none;padding:0}
  .tabs,.match{box-shadow:none;border-color:#d9cfba}
  .match,.view,.mkt,.vp,.tr,tr{break-inside:avoid}
@@ -1052,7 +1117,8 @@ footer{margin-top:42px;padding-top:24px;border-top:1px solid var(--line2);color:
 
 INIT_JS = ('(function(){try{var t=localStorage.getItem("wc-theme");'
            'if(!t)t=(window.matchMedia&&matchMedia("(prefers-color-scheme:dark)").matches)?"dark":"light";'
-           'document.documentElement.setAttribute("data-theme",t)}'
+           'document.documentElement.setAttribute("data-theme",t);'
+           'if(localStorage.getItem("wc-toc")==="collapsed")document.documentElement.classList.add("toc-collapsed")}'
            'catch(e){document.documentElement.setAttribute("data-theme","light")}})();')
 
 MAIN_JS = """
@@ -1076,14 +1142,24 @@ MAIN_JS = """
  function rs(){op.forEach(function(d){d.open=false;});op=[];}
  if(pf)pf.addEventListener('click',function(){ex();setTimeout(function(){window.print();},80);});
  window.addEventListener('beforeprint',ex);window.addEventListener('afterprint',rs);
- var links=[].slice.call(document.querySelectorAll('.nav-jump a')),map={};
- links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+ var links=[].slice.call(document.querySelectorAll('.nav-jump a')),map={},targets=[];
+ links.forEach(function(a){var id=a.getAttribute('href').slice(1);map[id]=a;var el=document.getElementById(id);if(el)targets.push(el);});
  if('IntersectionObserver' in window){
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){
    links.forEach(function(a){a.classList.remove('on');});var a=map[e.target.id];if(a){a.classList.add('on');
-   var nv=a.parentNode;nv.scrollLeft=a.offsetLeft-nv.clientWidth/2+a.clientWidth/2;}}});},{rootMargin:'-45% 0px -50% 0px',threshold:0});
-  document.querySelectorAll('section.match').forEach(function(s){io.observe(s);});
+   var nv=a.parentNode;nv.scrollTop=Math.max(0,a.offsetTop-nv.offsetTop-nv.clientHeight/2+a.clientHeight/2);}}});},{rootMargin:'-45% 0px -50% 0px',threshold:0});
+  targets.forEach(function(s){io.observe(s);});
  }
+ // 目录开合：宽屏=折叠/展开（记忆到 localStorage），窄屏=抽屉（遮罩/点链接收起）
+ var htmlEl=document.documentElement;
+ var col=document.getElementById('tocCollapse'),tg=document.getElementById('tocToggle'),sc=document.getElementById('tocScrim');
+ function desktop(){return matchMedia('(min-width:1101px)').matches;}
+ function setOpen(o){htmlEl.classList.toggle('toc-open',o);}
+ function setCol(c){htmlEl.classList.toggle('toc-collapsed',c);try{localStorage.setItem('wc-toc',c?'collapsed':'open');}catch(e){}}
+ if(col)col.addEventListener('click',function(){desktop()?setCol(true):setOpen(false);});
+ if(tg)tg.addEventListener('click',function(){desktop()?setCol(false):setOpen(true);});
+ if(sc)sc.addEventListener('click',function(){setOpen(false);});
+ links.forEach(function(a){a.addEventListener('click',function(){if(!desktop())setOpen(false);});});
 })();
 """
 
@@ -1108,6 +1184,21 @@ def build(merged, analysis, out, retro=None):
     agent_tags = "".join(f'<span class="atag">{brand_icon(b)}{esc(b)}</span>' for b in sel) or "—"
     disclaimer = (analysis.get("disclaimer") if analysis else None) or \
         "本报告基于多模型公开预测与实时倍率做的分析推演，不构成任何投注建议。博彩有风险，请理性娱乐、量力而行，未满法定年龄者请勿参与。"
+    # 先渲染各大块；目录只列"实际渲染出来"的块，避免锚点对不上
+    sched_html = render_schedule(order)
+    plans_html = render_plans(analysis.get("plans") if analysis else None)
+    upset_html = render_upset(analysis.get("upset_pick") if analysis else None)
+    retro_html = render_retro(retro)
+    nav_sections = []
+    for present, sid, label in (
+        (sched_html, "sched", "今日赛程"),
+        (plans_html, "plans", "三档方案"),
+        (upset_html, "upset", "博冷雷达"),
+        (retro_html, "retro", "上期复盘"),
+    ):
+        if present:
+            nav_sections.append((sid, label))
+
     doc = f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>世界杯玩法分析 · {esc(meta.get("date",""))}</title>
@@ -1127,12 +1218,12 @@ def build(merged, analysis, out, retro=None):
     <span class="mk-l">生成时间 <b>{esc(meta.get("generated_at",""))}</b></span>
   </div>
 </div></header>
-{render_nav(order)}
+{render_nav(order, nav_sections)}
 <main class="wrap">
-  {render_schedule(order)}
-  {render_plans(analysis.get("plans") if analysis else None)}
-  {render_upset(analysis.get("upset_pick") if analysis else None)}
-  {render_retro(retro)}
+  {sched_html}
+  {plans_html}
+  {upset_html}
+  {retro_html}
   {sections}
   <footer>
     <div class="disc">{esc(disclaimer)}</div>
