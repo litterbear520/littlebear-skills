@@ -771,7 +771,7 @@ a{color:inherit}
 .tp-gh{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--pa-d);margin:12px 0 -2px;letter-spacing:.02em}
 .tp-gh:first-child{margin-top:0}
 .tp-gh:before{content:"";width:14px;height:2px;border-radius:2px;background:var(--pa);flex:none}
-.combo{margin-left:auto;color:var(--pa-d);background:var(--pa-t);border:1px solid color-mix(in srgb,var(--pa) 26%,transparent);padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:0}
+.combo{color:var(--pa-d);background:var(--pa-t);border:1px solid color-mix(in srgb,var(--pa) 26%,transparent);padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:0}
 /* 玩法行：玩法独占首行，赔率右对齐；比赛名+信心降到次行。tp-legs 按内容自动铺成多列 */
 .tp-legs{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px 26px;align-items:start}
 .leg{display:flex;flex-direction:column;gap:3px}
