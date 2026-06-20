@@ -195,3 +195,128 @@ summary:focus-visible,
     animation-duration: 0.01ms !important;
   }
 }
+
+/* app shell: left sidebar (report list + dashboard) + minimal top-right */
+.shell {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 236px;
+  flex-shrink: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  background: var(--paper2);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand {
+  display: block;
+  font-size: 17px;
+  padding: 4px 8px 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+
+.navlabel {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 14px 8px 4px;
+}
+
+.navitem {
+  display: block;
+  padding: 7px 10px;
+  border-radius: 9px;
+  font-size: 14px;
+  color: var(--ink2);
+}
+.navitem:hover {
+  background: var(--panel2);
+  color: var(--ink);
+}
+.navitem.active {
+  background: color-mix(in srgb, var(--clay) 13%, transparent);
+  color: var(--clay);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--line2);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 16px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.iconbtn:hover {
+  background: var(--panel2);
+}
+
+.scrim {
+  display: none;
+}
+.only-mobile {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--shadow);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: rgba(0, 0, 0, 0.4);
+  }
+  .only-mobile {
+    display: inline-flex;
+  }
+}

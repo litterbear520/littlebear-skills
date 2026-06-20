@@ -17,7 +17,7 @@ export default function Dashboard({
   const settledDays = index.days.filter((d) => d.status === "settled");
 
   return (
-    <main id="main" className="wrap">
+    <main className="wrap">
       <h1 className="serif" style={{ fontSize: 26, fontWeight: 500, margin: "28px 0 4px" }}>
         收益仪表盘
       </h1>

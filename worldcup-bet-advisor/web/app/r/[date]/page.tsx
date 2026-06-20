@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getIndex, getReportDates } from "@/lib/data";
-import TopNav from "../../components/TopNav";
+import AppShell from "../../components/AppShell";
 import ReportFrame from "../../components/ReportFrame";
 
 export const dynamic = "force-static";
@@ -20,9 +20,8 @@ export default async function ReportPage({
   if (!index.reportDates.includes(date)) notFound();
 
   return (
-    <div id="main" style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <TopNav reportDates={index.reportDates} current={date} view="report" />
+    <AppShell reportDates={index.reportDates}>
       <ReportFrame date={date} />
-    </div>
+    </AppShell>
   );
 }

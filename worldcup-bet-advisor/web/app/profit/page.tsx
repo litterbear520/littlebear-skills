@@ -1,5 +1,5 @@
 import { getIndex, getDay } from "@/lib/data";
-import TopNav from "../components/TopNav";
+import AppShell from "../components/AppShell";
 import Dashboard from "../components/Dashboard";
 
 export const dynamic = "force-static";
@@ -10,9 +10,8 @@ export default function ProfitPage() {
   const latestSettled = settledDates[0] ? getDay(settledDates[0]) : null;
 
   return (
-    <div>
-      <TopNav reportDates={index.reportDates} current="" view="profit" />
+    <AppShell reportDates={index.reportDates}>
       <Dashboard index={index} latestSettled={latestSettled} />
-    </div>
+    </AppShell>
   );
 }
