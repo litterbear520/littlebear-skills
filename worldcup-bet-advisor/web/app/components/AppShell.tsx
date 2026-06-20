@@ -56,6 +56,26 @@ function GithubIcon() {
   );
 }
 
+function ChartIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+      <path d="M3 3v18h18" />
+      <path d="M7 14l4-4 3 3 5-6" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" {...stroke} aria-hidden="true">
+      <rect x="3" y="4.5" width="18" height="16" rx="2" />
+      <line x1="3" y1="9.5" x2="21" y2="9.5" />
+      <line x1="8" y1="2.5" x2="8" y2="6" />
+      <line x1="16" y1="2.5" x2="16" y2="6" />
+    </svg>
+  );
+}
+
 export default function AppShell({
   reportDates,
   children,
@@ -134,7 +154,10 @@ export default function AppShell({
         </Link>
 
         <Link href="/profit" className={onProfit ? "navitem active" : "navitem"}>
-          收益仪表盘
+          <span className="navicon">
+            <ChartIcon />
+          </span>
+          仪表盘
         </Link>
 
         <div className="navlabel">报告</div>
@@ -148,6 +171,9 @@ export default function AppShell({
                 href={`/r/${d}`}
                 className={d === currentDate && !onProfit ? "navitem active" : "navitem"}
               >
+                <span className="navicon">
+                  <CalendarIcon />
+                </span>
                 <span className="date-num">{d}</span>
                 <span className="date-wd">{weekday(d)}</span>
               </Link>

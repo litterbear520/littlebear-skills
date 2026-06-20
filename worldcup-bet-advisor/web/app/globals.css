@@ -293,18 +293,46 @@ summary:focus-visible,
   color: color-mix(in srgb, var(--clay) 70%, var(--muted));
 }
 
+.navicon {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  margin-right: 10px;
+  color: var(--muted);
+  transition: color 0.14s ease;
+}
+.navitem:hover .navicon {
+  color: var(--ink2);
+}
+.navitem.active .navicon {
+  color: var(--clay);
+}
+
 .tocitem {
   font-size: 13px;
   color: var(--muted);
-  padding: 6px 12px;
+  padding: 6px 12px 6px 13px;
   display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.tocitem::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--line2);
+  margin-right: 10px;
+  vertical-align: middle;
+}
 .tocitem:hover {
   color: var(--ink);
   background: var(--panel2);
+}
+.tocitem:hover::before {
+  background: var(--clay);
 }
 
 .main {
