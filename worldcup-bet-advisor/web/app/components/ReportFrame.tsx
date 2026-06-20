@@ -2,6 +2,18 @@
 
 import { useEffect, useRef } from "react";
 
+// Sidebar TOC labels: a match reads like "01:00 荷兰 / 瑞典" in the report — drop
+// the kickoff time and show "荷兰 vs 瑞典". Section headers (今日赛程 / 三档方案 …)
+// carry neither a leading time nor a slash, so they pass through unchanged.
+function tidyTocLabel(raw: string): string {
+  return raw
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^\d{1,2}:\d{2}\s*/, "")
+    .replace(/\s*\/\s*/g, " vs ")
+    .trim();
+}
+
 // Embeds the original report.html. After it loads we:
 //  1. match the current theme,
 //  2. collapse the report's OWN built-in TOC (its native toc-collapsed mode →
@@ -37,7 +49,7 @@ export default function ReportFrame({ date }: { date: string }) {
 
         const items = Array.from(doc.querySelectorAll("#toc a[href^='#']"))
           .map((a) => ({
-            label: (a.textContent || "").replace(/\s+/g, " ").trim(),
+            label: tidyTocLabel(a.textContent || ""),
             href: a.getAttribute("href") || "",
           }))
           .filter((i) => i.label && i.href);
