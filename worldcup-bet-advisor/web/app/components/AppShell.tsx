@@ -5,6 +5,12 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 
 const GITHUB_URL = "https://github.com/litterbear520/littlebear-skills";
+const WD = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+function weekday(d: string): string {
+  const x = new Date(`${d}T00:00:00`);
+  return Number.isNaN(x.getTime()) ? "" : WD[x.getDay()];
+}
 
 function GithubIcon() {
   return (
@@ -24,13 +30,23 @@ export default function AppShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState<boolean | null>(null);
+  const [toc, setToc] = useState<{ label: string; href: string }[]>([]);
 
   useEffect(() => {
     setDark(document.documentElement.getAttribute("data-theme") === "dark");
   }, []);
+
+  // close drawer + reset the report's lifted TOC when the route changes
   useEffect(() => {
     setOpen(false);
+    setToc([]);
   }, [pathname]);
+
+  useEffect(() => {
+    const onToc = (e: Event) => setToc(((e as CustomEvent).detail as typeof toc) || []);
+    window.addEventListener("report-toc", onToc as EventListener);
+    return () => window.removeEventListener("report-toc", onToc as EventListener);
+  }, []);
 
   const onProfit = pathname === "/profit";
   const currentDate =
@@ -47,7 +63,6 @@ export default function AppShell({
     try {
       localStorage.setItem("wc-theme", val);
     } catch {}
-    // also flip the embedded report (same-origin iframe) so one toggle rules both
     const f = document.querySelector("iframe.report-frame") as HTMLIFrameElement | null;
     try {
       f?.contentDocument?.documentElement.setAttribute("data-theme", val);
@@ -55,19 +70,28 @@ export default function AppShell({
     setDark(next);
   }
 
+  function jumpTo(href: string) {
+    const f = document.querySelector("iframe.report-frame") as HTMLIFrameElement | null;
+    const el = f?.contentDocument?.querySelector(href);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setOpen(false);
+  }
+
   return (
     <div className="shell">
       <aside className={open ? "sidebar open" : "sidebar"}>
-        <Link href="/" className="serif brand">
-          世界杯 · 每日玩法
+        <Link href="/" className="brand serif">
+          世界杯<span className="brand-dot">·</span>每日玩法
         </Link>
+
         <Link href="/profit" className={onProfit ? "navitem active" : "navitem"}>
           收益仪表盘
         </Link>
+
         <div className="navlabel">报告</div>
         <nav>
           {reportDates.length === 0 ? (
-            <div className="dim" style={{ fontSize: 13, padding: "7px 10px" }}>暂无报告</div>
+            <div className="dim" style={{ fontSize: 13, padding: "7px 12px" }}>暂无报告</div>
           ) : (
             reportDates.map((d) => (
               <Link
@@ -75,11 +99,31 @@ export default function AppShell({
                 href={`/r/${d}`}
                 className={d === currentDate && !onProfit ? "navitem active" : "navitem"}
               >
-                {d}
+                <span className="date-num">{d}</span>
+                <span className="date-wd">{weekday(d)}</span>
               </Link>
             ))
           )}
         </nav>
+
+        {!onProfit && toc.length > 0 ? (
+          <>
+            <div className="navlabel">本页目录</div>
+            <nav>
+              {toc.map((it, i) => (
+                <button
+                  key={`${it.href}-${i}`}
+                  type="button"
+                  className="navitem tocitem"
+                  onClick={() => jumpTo(it.href)}
+                  title={it.label}
+                >
+                  {it.label}
+                </button>
+              ))}
+            </nav>
+          </>
+        ) : null}
       </aside>
 
       {open ? <div className="scrim" onClick={() => setOpen(false)} aria-hidden="true" /> : null}
@@ -100,8 +144,8 @@ export default function AppShell({
             href={GITHUB_URL}
             target="_blank"
             rel="noreferrer"
-            aria-label="GitHub"
-            title="GitHub"
+            aria-label="GitHub 仓库"
+            title="GitHub 仓库"
           >
             <GithubIcon />
           </a>
@@ -115,7 +159,9 @@ export default function AppShell({
             {dark == null ? "◐" : dark ? "☀" : "☾"}
           </button>
         </div>
-        <div id="main" className="content">{children}</div>
+        <div id="main" className="content">
+          {children}
+        </div>
       </div>
     </div>
   );
