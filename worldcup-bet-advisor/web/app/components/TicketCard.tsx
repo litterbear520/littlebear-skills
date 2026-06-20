@@ -1,5 +1,5 @@
 import type { Ticket } from "@/lib/types";
-import { yuan, plainYuan, tierColorVar } from "@/lib/format";
+import { yuan, plainYuan, odds, tierColorVar } from "@/lib/format";
 
 const STATUS = {
   win: { label: "已中", color: "var(--success)", border: "var(--success)" },
@@ -44,7 +44,7 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
           return (
             <li key={i} style={{ color: lost ? "var(--text-tertiary)" : "var(--text)" }}>
               {lost ? <s>{leg.text}</s> : leg.text}
-              {leg.odds != null ? <span className="dim" style={{ fontSize: 12 }}> · {leg.odds}</span> : null}
+              {leg.odds != null ? <span className="leg-odds">@{odds(leg.odds)}</span> : null}
               {leg.hit === true ? <span style={{ color: "var(--success)", fontSize: 12 }}> ✓</span> : null}
               {lost ? <span style={{ color: "var(--danger)", fontSize: 12 }}> ✗</span> : null}
             </li>
@@ -55,17 +55,32 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 8,
+          flexWrap: "wrap",
           fontSize: 13,
           marginTop: 12,
           paddingTop: 10,
           borderTop: "1px solid var(--border)",
         }}
       >
-        <span className="dim">
-          {plainYuan(ticket.stake)} × {ticket.combinedOdds}
+        <span className="dim">本金 {plainYuan(ticket.stake)}</span>
+        <span className="odds-chip" title={`倍率 ${odds(ticket.combinedOdds)}　回报 ${plainYuan(ticket.payout)}`}>
+          <span className="odds-x">×</span>
+          {odds(ticket.combinedOdds)}
         </span>
-        <span style={{ color: ticket.status === "win" ? "var(--success)" : ticket.status === "loss" ? "var(--danger)" : "var(--text-tertiary)", fontWeight: 500 }}>
+        <span
+          style={{
+            marginLeft: "auto",
+            fontWeight: 600,
+            color:
+              ticket.status === "win"
+                ? "var(--success)"
+                : ticket.status === "loss"
+                  ? "var(--danger)"
+                  : "var(--text-tertiary)",
+          }}
+        >
           {ticket.status === "pending" ? "待结算" : yuan(ticket.profit)}
         </span>
       </div>

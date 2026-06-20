@@ -131,6 +131,38 @@ a {
   white-space: nowrap;
 }
 
+/* 倍率 (combined odds) — the multiplier is the heart of a bet slip, so give it
+   a gold chip that reads as "payout multiple" rather than a dim inline number */
+.odds-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--gold);
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  border: 1px solid color-mix(in srgb, var(--gold) 32%, transparent);
+}
+.odds-chip .odds-x {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.65;
+  margin-right: 1px;
+}
+
+/* per-leg odds: quiet, monospaced-feel @1.45 tag trailing each selection */
+.leg-odds {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  margin-left: 5px;
+}
+
 /* red "中" seal on a won ticket — that stamped, just-cashed feeling */
 .win-seal {
   position: absolute;

@@ -17,3 +17,9 @@ next-env.d.ts
 # `vercel --prod` (CLI uploads them) but NOT committed to the public repo.
 /data/*.json
 /public/reports/*.html
+
+# The repo-root .gitignore carries a Python "lib/" rule (packaging artifacts)
+# that would otherwise swallow this Next.js app's own source folder. Re-include
+# it so a fresh clone actually has lib/format.ts, lib/types.ts, lib/data.ts.
+!/lib/
+!/lib/**

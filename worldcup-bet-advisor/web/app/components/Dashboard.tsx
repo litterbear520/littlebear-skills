@@ -1,6 +1,6 @@
 import type { SiteIndex, DayData } from "@/lib/types";
 import { yuan, plainYuan, profitVar, weekdayOf } from "@/lib/format";
-import ProfitBars from "./ProfitBars";
+import ProfitLine from "./ProfitLine";
 import TicketCard from "./TicketCard";
 
 export default function Dashboard({
@@ -53,8 +53,8 @@ export default function Dashboard({
         </div>
 
         <div className="card" style={{ padding: 18 }}>
-          <div className="dim" style={{ fontSize: 13, marginBottom: 10 }}>近 14 日收益</div>
-          <ProfitBars series={index.profitSeries} />
+          <div className="dim" style={{ fontSize: 13, marginBottom: 10 }}>近 14 日收益曲线</div>
+          <ProfitLine series={index.profitSeries} />
         </div>
       </div>
 
