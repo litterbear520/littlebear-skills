@@ -18,6 +18,7 @@ allowed-tools: Bash, Read, Write, Edit, Skill, AskUserQuestion, ToolSearch, mcp_
 - **直连优先、CDP 兜底**：接口默认直接拉（urllib）；只有被反爬阻断才走 web-access 的 CDP，且先向用户展示反爬须知。
 - **开工前读 `references/data-sources.md`**：两站接口、字段字典（sw/sd/sl 比分、t 总进球、ht 半全场、single* 单关标记）、跨站队名匹配都在里面。
 - **复盘驱动进化**：每次触发先做赛后复盘（第 R 步），两条线增量沉淀进 `references/experience.local.md`——Track 1 把"嘉豪预测 vs 真实比分"提炼成判断力，Track 2 对账上期买法。脚本只拉事实，判断由你做。
+- **本地报告 + 公网站点**：第 5 步的 `report.html` 既本地打开，也被第 7 步的 Next.js 站点（`web/`）**原样 iframe 嵌入**发布到公网——报告版式一字不改，只多了日期切换（看往期）和收益仪表盘（「我买的票」中没中 + 每日收益）。默认私有模式：报告/本金/收益不进公开仓库，`npx vercel --prod` 直推上线。详见 `references/site-deploy.md`。
 
 工作目录：每次新建 `runs/<日期>/`（在本 skill 目录下），所有中间文件和最终 `report.html` 放这里。命令示例里的 `$WS` 即指它。
 
@@ -110,6 +111,7 @@ python scripts/retro.py locate --out "$WS/retro_locate.json"
 - 拉终场对账：`python scripts/retro.py score --ids <$PREV finished_ids,逗号分隔> --out "$PREV/retro_facts.json"`。
 - 读 `$PREV/analysis.json`（上期三档买法 + 价值/陷阱点）。
 - 问用户这期买了哪个（含自选腿）：用 `AskUserQuestion` 列出该期三档与关键腿，让用户选实际买了哪档/哪些腿（含"没买/只看"）。用户常超出我们三档自己组合（自选比分串、对冲腿、半全场串等），让他一并补上。积压的旧 run 用户可能记不清，允许选"记不清"——那条 run 仍要 grade 我们的推荐、写买法经验、mark，只是缺"用户实际所买"这一维。
+- **记每注本金 + 赔率（公网站点收益的唯一数据源）**：拿到用户实际所买后，顺带问每注下了多少钱（¥）、各腿赔率。这两个数让站点能用"本金 × 连乘赔率"算出**真实盈亏**（命中由本就要做的 grade 得出，你只多收集"本金 + 赔率"）。把每注写进 `retro.json` 的 `user_bought.tickets[]`（`tier`/`type`/`stake`/`legs[{text,odds,hit}]`，schema 见 playbook 第七节）——第 7 步发布时 `export_site_data.py settle` 据此渲染「我买的票」中没中卡片与每日收益柱状图。用户"只看没买"则 `tickets` 留空（站点显示当日 0 收益）。本金只进私有站点仓库，不进公开 skill 仓库。
 - 判定分两层：
   - 脚本可判（胜平负/让球/比分/总进球，只依赖终场比分）→ 用 `retro_facts.json` 自动判 hit/miss。
   - 脚本判不了（半全场 htft、半场比分、任何依赖"半场/过程"的玩法；或某场终场暂时拉不到）→ 两接口都只给全场比分。这类腿问用户最快也最权威：把它们用 `AskUserQuestion`（multiSelect）列出问"中没中"（`中了`/`没中`/`还没结算`），拿回答写进 `hit`——别自己猜，也别含糊标 null 或"存疑"。我们三档里的此类腿（如"阿根廷 半全场主/主"）同样问、同样别猜。（模型校准要看真实过程，那是 Track 1 的事。）
@@ -258,7 +260,27 @@ python scripts/build_report.py --merged "$WS/merged.json" --analysis "$WS/analys
 
 ## 第 6 步：聊天摘要
 
-在聊天里给一段精炼版：每场一句结论 + 三档方案（关键腿 + 合计赔率）+ 一句"理性投注"。别把报告全文复述一遍，点到为止、引导用户去看报告。
+在聊天里给一段精炼版：每场一句结论 + 三档方案（关键腿 + 合计赔率）+ 一句"理性投注"。别把报告全文复述一遍，点到为止、引导用户去看报告（本地 `report.html` 或公网站点链接）。
+
+## 第 7 步：发布到每日站点（Vercel）
+
+把第 5 步的 `report.html` **原样**搬上一个公网站点（`web/` 里的 Next.js 应用用 iframe 嵌入报告，一字不改），外面只多两样：**日期切换**看当天/往期、**收益仪表盘**看「我买的票」中没中 + 每日收益。机制、隐私边界、一次性设置全在 `references/site-deploy.md`。
+
+默认**私有模式**：报告/本金/收益 gitignore、不进公开仓库，用 `npx vercel --prod` 从本地直推上线（CLI 不读 `.gitignore`，数据上线但不进 GitHub）。
+
+一次性设置（`cd web && pnpm install && npx vercel login && npx vercel link`）做过后，发布一条命令：
+
+```bash
+bash scripts/publish_site.sh \
+  --report "$WS/report.html" --analysis "$WS/analysis.json" \
+  ${PREV:+--retro "$PREV/retro.json"} --deploy
+```
+
+它把 `report.html` 拷进 `web/public/reports/<日期>.html`、登记当天有报告（status=open）；带 `--retro` 时用 `export_site_data.py settle` 回填上一期的票与真实盈亏（status=settled）；`--deploy` 则直接 `npx vercel --prod` 上线。几十秒后刷新链接即可。
+
+- **首次/未设置**：先读 `references/site-deploy.md` 走一次性设置，或用官方 `deploy-to-vercel` 技能部署。别默默跳过——告诉用户站点没建、问要不要现在建。
+- **fail-soft**：没装/没登录 Vercel 时不带 `--deploy` 也能把数据备在本地，本地 `report.html` 始终在，不阻塞正事。
+- 线上站「有链接即可见」，但**只有你能改**——别人 clone 仓库只能用技能生成自己的报告，碰不到你的部署（原理见 `references/site-deploy.md`）。
 
 ---
 

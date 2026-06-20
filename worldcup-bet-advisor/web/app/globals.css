@@ -1,0 +1,197 @@
+/* Design tokens copied 1:1 from the existing report (build_report.py) so the
+   dashboard sits seamlessly next to it. Theme is driven by [data-theme] on
+   <html> and persisted under localStorage["wc-theme"] — identical to the
+   report, so the two stay in sync (same origin). */
+:root {
+  --paper: #faf8f3;
+  --paper2: #f1ebdd;
+  --panel: #ffffff;
+  --panel2: #fbf8f1;
+  --ink: #1a1813;
+  --ink2: #574f40;
+  --muted: #928873;
+  --line: #e8e1d1;
+  --line2: #d7cdb8;
+  --clay: #c2603f;
+  --clay-d: #a2492e;
+  --sage: #5e6b4f;
+  --gold: #9a7a2c;
+  --danger: #b0413a;
+  --upset: #9a4f63;
+  --shadow: 0 1px 2px rgba(40, 33, 20, 0.05), 0 14px 34px -18px rgba(40, 33, 20, 0.22);
+  --shadow-s: 0 1px 2px rgba(40, 33, 20, 0.05);
+  --r: 16px;
+  --rs: 11px;
+
+  /* aliases used by the dashboard components */
+  --bg: var(--paper);
+  --surface: var(--panel);
+  --surface-2: var(--panel2);
+  --text: var(--ink);
+  --text-secondary: var(--ink2);
+  --text-tertiary: var(--muted);
+  --border: var(--line);
+  --border-strong: var(--line2);
+  --accent: var(--clay);
+  --success: var(--sage);
+  --warning: var(--gold);
+  --accent-soft: color-mix(in srgb, var(--clay) 14%, transparent);
+  --success-soft: color-mix(in srgb, var(--sage) 18%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 14%, transparent);
+  --warning-soft: color-mix(in srgb, var(--gold) 18%, transparent);
+  --radius: var(--r);
+  --radius-sm: var(--rs);
+  --font-serif: "Fraunces", Georgia, "Songti SC", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+}
+
+[data-theme="dark"] {
+  --paper: #1f1f1e;
+  --paper2: #181816;
+  --panel: #2c2c2a;
+  --panel2: #181816;
+  --ink: #f8f8f6;
+  --ink2: #c7c5bc;
+  --muted: #97948b;
+  --line: #343330;
+  --line2: #403e39;
+  --clay: #d97757;
+  --clay-d: #e2906f;
+  --sage: #9db082;
+  --gold: #d7ac5e;
+  --danger: #e08a7d;
+  --upset: #ce8da0;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -20px rgba(0, 0, 0, 0.7);
+  --shadow-s: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+.serif {
+  font-family: var(--font-serif);
+  font-weight: 500;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-s);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 19px;
+  font-weight: 500;
+  margin: 34px 0 14px;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+.dim {
+  color: var(--text-tertiary);
+}
+
+.pill {
+  display: inline-block;
+  font-size: 12px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.btn {
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: var(--rs);
+  border: 1px solid var(--line2);
+  background: var(--panel);
+  color: var(--text);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:hover {
+  background: var(--panel2);
+}
+
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 20;
+  padding: 8px 14px;
+  border-radius: var(--rs);
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line2);
+}
+.skip-link:focus {
+  left: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

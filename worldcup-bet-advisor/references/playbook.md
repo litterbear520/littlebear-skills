@@ -242,7 +242,17 @@ python scripts/fetch_predictions.py upsets --out "$WS/upsets.json"
 ```json
 {
   "reviewed_run": "2026-06-15", "reviewed_at": "2026-06-16",
-  "user_bought": { "tier": "平衡", "legs": ["比利时 胜(单关)"], "note": "或：没买/只看" },
+  "user_bought": {
+    "summary": "买了稳健单关 + 平衡 2 串各一注",
+    "tickets": [
+      { "tier": "稳健", "type": "单关", "stake": 50,
+        "legs": [ {"text": "比利时 胜", "odds": 1.41, "hit": true} ] },
+      { "tier": "平衡", "type": "2串1", "stake": 40,
+        "legs": [ {"text": "阿根廷 -1", "odds": 1.80, "hit": true},
+                  {"text": "西班牙 胜", "odds": 1.73, "hit": true} ] }
+    ],
+    "note": "或：没买/只看（tickets 留空）"
+  },
   "user_result": "你买的那注中没中的一句话总结",
   "matches": [
     { "match_id": "54329956", "teams": "比利时 vs 埃及",
@@ -262,6 +272,7 @@ python scripts/fetch_predictions.py upsets --out "$WS/upsets.json"
   "historical_synced": 15                                               // 可选：本次 Track 1 新分析的历史场数
 }
 ```
+- `user_bought.tickets[]`（公网站点「我买的票 + 每日收益」的数据源）：每注一个对象——`tier`（稳健/平衡/激进/自选）、`type`（单关 / N串1，缺省按腿数推）、`stake`（本金 ¥，必填才能算收益）、`legs[{text, odds, hit}]`。`hit` 来自本就要做的 grade（半全场等脚本判不了的腿由用户确认，见上）。`export_site_data.py settle` 据此算：全中→`本金×连乘赔率−本金`、任一腿不中→`−本金`、有腿未结算→pending。用户"只看没买"则 `tickets` 留空（站点显示当日 0 收益）。本金是隐私、只进私有站点仓库。
 - `graded[].hit`=命中；`warned_correctly`=陷阱点正确避开（渲染成 ⊘ 琥珀）；其余渲染成 ✗。
 - **半全场/半场等脚本判不了的腿**：`hit` 必须来自**用户确认**（见 SKILL.md 第 R 步 Track 2 "判定分两层"），不要写 null 猜、也不要"存疑"含糊；确实还没结算才用 `null` 并在 `note` 写"待结算"。
 - 渲染位置：三档方案**下方**的"上期复盘回顾"可折叠模块。

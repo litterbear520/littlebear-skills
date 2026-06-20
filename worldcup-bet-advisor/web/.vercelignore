@@ -1,0 +1,7 @@
+# Vercel CLI uses THIS file (not .gitignore) to decide what to upload.
+# We exclude only build artifacts / deps — so the gitignored data/ and
+# public/reports/ ARE uploaded to Vercel (data reaches the site, not GitHub).
+node_modules
+.next
+.git
+.vercel
