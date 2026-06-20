@@ -1,39 +1,85 @@
-import { plainYuan } from "@/lib/format";
+import { yuan } from "@/lib/format";
 
-// Server-rendered SVG line chart of daily profit. No chart library, no client
-// JS — just math + an <svg>. A dashed zero line is the break-even axis; the
-// trace weaves above it (profit, teal) and below it (loss, red), with a dot per
-// settled day. One settled day renders as a single marker; the line appears as
-// soon as there are two.
+// Server-rendered SVG of the cumulative-profit (equity) curve — the running
+// total starting from a 0 anchor, so it reads like a P&L chart: nice gridlines
+// with ¥ axis labels, an emphasized break-even (0) line, a date range on the
+// x-axis, and an open end-cap marker with the current total. No chart lib, no
+// client JS. One settled day already draws a line (0 → that day's total).
+
+// Pick a "nice" round tick step (1/2/5 × 10ⁿ) so axis labels read cleanly.
+function niceStep(range: number, target = 4): number {
+  if (range <= 0) return 1;
+  const raw = range / target;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const step = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+  return step * mag;
+}
+
+function tickLabel(v: number): string {
+  if (v === 0) return "0";
+  return `${v > 0 ? "+" : "−"}¥${Math.abs(v).toLocaleString("en-US")}`;
+}
+
 export default function ProfitLine({
   series,
 }: {
   series: { date: string; profit: number }[];
 }) {
-  const data = series.slice(-14);
-  if (data.length === 0) {
+  if (!series || series.length === 0) {
     return (
       <div className="dim" style={{ fontSize: 13 }}>
-        还没有已结算的收益，复盘后这里会出现每日收益曲线。
+        还没有已结算的收益，复盘后这里会出现累计收益曲线。
       </div>
     );
   }
 
-  const maxAbs = Math.max(1, ...data.map((d) => Math.abs(d.profit)));
-  const padX = 16;
-  const stepX = 48;
-  const baseline = 56; // y of the zero / break-even line
-  const amp = 42; // px the trace may travel each direction
-  const W = padX * 2 + Math.max(1, data.length - 1) * stepX;
-  const H = 124;
-  const dateY = 108;
-  const showValues = data.length <= 8; // avoid label crowding once the run grows
+  // cumulative curve, anchored at 0 before the first settled day
+  const pts: { cum: number }[] = [{ cum: 0 }];
+  let run = 0;
+  for (const d of series) {
+    run = Math.round((run + d.profit) * 100) / 100;
+    pts.push({ cum: run });
+  }
 
-  const xOf = (i: number) => padX + i * stepX;
-  const yOf = (p: number) => baseline - (p / maxAbs) * amp;
+  const cums = pts.map((p) => p.cum);
+  const dataMin = Math.min(0, ...cums);
+  const dataMax = Math.max(0, ...cums);
+  const step = niceStep(Math.max(dataMax - dataMin, 1));
+  const niceMin = Math.floor(dataMin / step) * step;
+  const niceMax = Math.ceil(dataMax / step) * step;
+  const ticks: number[] = [];
+  for (let v = niceMin; v <= niceMax + 1e-9; v += step) ticks.push(Math.round(v * 100) / 100);
 
-  const pts = data.map((d, i) => ({ x: xOf(i), y: yOf(d.profit), d }));
-  const line = pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const W = 680;
+  const H = 280;
+  const L = 58;
+  const R = 18;
+  const T = 18;
+  const B = 32;
+  const plotW = W - L - R;
+  const plotH = H - T - B;
+  const n = pts.length;
+
+  const xOf = (i: number) => (n === 1 ? L + plotW / 2 : L + (i / (n - 1)) * plotW);
+  const yOf = (v: number) => T + ((niceMax - v) / (niceMax - niceMin || 1)) * plotH;
+
+  const last = pts[n - 1];
+  const lineColor = last.cum >= 0 ? "var(--success)" : "var(--danger)";
+  const linePath = pts
+    .map((p, i) => `${i ? "L" : "M"}${xOf(i).toFixed(1)} ${yOf(p.cum).toFixed(1)}`)
+    .join(" ");
+
+  // decorative vertical gridlines (evenly spaced, independent of point count)
+  const cols = 6;
+  const vGrid = Array.from({ length: cols + 1 }, (_, k) => L + (k / cols) * plotW);
+
+  const endX = xOf(n - 1);
+  const endY = yOf(last.cum);
+  const labelY = Math.max(T + 11, endY - 9);
+
+  const firstDate = series[0].date.slice(5);
+  const lastDate = series[series.length - 1].date.slice(5);
 
   return (
     <svg
@@ -41,61 +87,46 @@ export default function ProfitLine({
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="每日收益折线图"
-      style={{ display: "block", maxHeight: 165 }}
+      aria-label="累计收益曲线"
+      style={{ display: "block", maxHeight: 260 }}
     >
-      {/* break-even axis */}
-      <line
-        x1={0}
-        y1={baseline}
-        x2={W}
-        y2={baseline}
-        stroke="var(--border-strong)"
-        strokeWidth={1}
-        strokeDasharray="3 4"
-      />
-      <text x={2} y={baseline - 4} fontSize={9} fill="var(--text-tertiary)">
-        0
-      </text>
+      {vGrid.map((x, i) => (
+        <line key={`v${i}`} x1={x} y1={T} x2={x} y2={H - B} stroke="var(--border)" strokeWidth={1} opacity={0.5} />
+      ))}
 
-      {pts.length > 1 ? (
-        <path
-          d={line}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ) : null}
-
-      {pts.map((p) => {
-        const color =
-          p.d.profit > 0 ? "var(--success)" : p.d.profit < 0 ? "var(--danger)" : "var(--text-tertiary)";
-        const above = p.d.profit >= 0;
+      {ticks.map((t) => {
+        const y = yOf(t);
+        const zero = t === 0;
         return (
-          <g key={p.d.date}>
-            <circle cx={p.x} cy={p.y} r={3.6} fill="var(--surface)" stroke={color} strokeWidth={2}>
-              <title>{`${p.d.date} · ${plainYuan(p.d.profit)}`}</title>
-            </circle>
-            {showValues ? (
-              <text
-                x={p.x}
-                y={above ? p.y - 9 : p.y + 16}
-                textAnchor="middle"
-                fontSize={10.5}
-                fontWeight={600}
-                fill={color}
-              >
-                {plainYuan(p.d.profit)}
-              </text>
-            ) : null}
-            <text x={p.x} y={dateY} textAnchor="middle" fontSize={11} fill="var(--text-tertiary)">
-              {p.d.date.slice(8)}
+          <g key={`h${t}`}>
+            <line
+              x1={L}
+              y1={y}
+              x2={W - R}
+              y2={y}
+              stroke={zero ? "var(--border-strong)" : "var(--border)"}
+              strokeWidth={zero ? 1.4 : 1}
+            />
+            <text x={L - 9} y={y + 3.6} textAnchor="end" fontSize={11.5} fill="var(--text-tertiary)">
+              {tickLabel(t)}
             </text>
           </g>
         );
       })}
+
+      <path d={linePath} fill="none" stroke={lineColor} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+
+      <circle cx={endX} cy={endY} r={4.5} fill="var(--surface)" stroke={lineColor} strokeWidth={2.5} />
+      <text x={endX - 9} y={labelY} textAnchor="end" fontSize={12.5} fontWeight={600} fill={lineColor}>
+        {yuan(last.cum)}
+      </text>
+
+      <text x={L} y={H - 11} textAnchor="start" fontSize={11.5} fill="var(--text-tertiary)">
+        {firstDate}
+      </text>
+      <text x={W - R} y={H - 11} textAnchor="end" fontSize={11.5} fill="var(--text-tertiary)">
+        {lastDate}
+      </text>
     </svg>
   );
 }

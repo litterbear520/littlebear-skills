@@ -25,37 +25,32 @@ export default function Dashboard({
         基于复盘时记录的真实本金与赔率。模型分析 ≠ 投注建议，理性娱乐。
       </p>
 
-      <div
-        className="hero-grid"
-        style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.5fr)", gap: 14, marginTop: 16 }}
-      >
-        <div className="card" style={{ padding: 18 }}>
-          <div className="dim" style={{ fontSize: 13 }}>累计收益</div>
-          <div className="serif" style={{ fontSize: 36, marginTop: 2, color: profitVar(index.cumulativeProfit) }}>
-            {yuan(index.cumulativeProfit)}
-          </div>
-          <div style={{ display: "flex", gap: 18, marginTop: 12, fontSize: 13, flexWrap: "wrap" }}>
-            <span>
-              <span className="dim">总本金 </span>
-              <span className="muted">{plainYuan(index.totalStake)}</span>
-            </span>
-            <span>
-              <span className="dim">命中率 </span>
-              <span className="muted">
-                {winRate != null ? `${winRate}% (${index.winTickets}/${index.totalTickets})` : "—"}
-              </span>
-            </span>
-            <span>
-              <span className="dim">回报率 </span>
-              <span style={{ color: profitVar(index.cumulativeProfit) }}>{roi != null ? `${roi}%` : "—"}</span>
-            </span>
-          </div>
+      <div className="card" style={{ padding: 18, marginTop: 16 }}>
+        <div className="dim" style={{ fontSize: 13 }}>累计收益</div>
+        <div className="serif" style={{ fontSize: 36, marginTop: 2, color: profitVar(index.cumulativeProfit) }}>
+          {yuan(index.cumulativeProfit)}
         </div>
+        <div style={{ display: "flex", gap: 18, marginTop: 12, fontSize: 13, flexWrap: "wrap" }}>
+          <span>
+            <span className="dim">总本金 </span>
+            <span className="muted">{plainYuan(index.totalStake)}</span>
+          </span>
+          <span>
+            <span className="dim">命中率 </span>
+            <span className="muted">
+              {winRate != null ? `${winRate}% (${index.winTickets}/${index.totalTickets})` : "—"}
+            </span>
+          </span>
+          <span>
+            <span className="dim">回报率 </span>
+            <span style={{ color: profitVar(index.cumulativeProfit) }}>{roi != null ? `${roi}%` : "—"}</span>
+          </span>
+        </div>
+      </div>
 
-        <div className="card" style={{ padding: 18 }}>
-          <div className="dim" style={{ fontSize: 13, marginBottom: 10 }}>近 14 日收益曲线</div>
-          <ProfitLine series={index.profitSeries} />
-        </div>
+      <div className="card" style={{ padding: "16px 18px 12px", marginTop: 14 }}>
+        <div className="dim" style={{ fontSize: 13, marginBottom: 8 }}>累计收益曲线</div>
+        <ProfitLine series={index.profitSeries} />
       </div>
 
       {latestSettled && (latestSettled.tickets ?? []).length > 0 ? (

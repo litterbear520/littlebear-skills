@@ -348,9 +348,6 @@ a {
   .grid-3 {
     grid-template-columns: 1fr;
   }
-  .hero-grid {
-    grid-template-columns: 1fr !important;
-  }
 }
 
 .btn {
@@ -430,17 +427,48 @@ summary:focus-visible,
   }
 }
 
-.brand {
-  display: block;
-  font-size: 18px;
-  letter-spacing: 0.01em;
-  padding: 2px 11px 16px;
+/* brand + the collapse toggle share one row (Claude/Gemini-style sidebar head) */
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px 14px 0;
   margin-bottom: 8px;
   border-bottom: 1px solid var(--line);
+}
+.brand {
+  flex: 1;
+  min-width: 0;
+  font-size: 18px;
+  letter-spacing: 0.01em;
+  padding: 2px 0 2px 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .brand-dot {
   color: var(--clay);
   margin: 0 6px;
+}
+.nav-collapse {
+  flex: none;
+}
+
+/* the topbar expand button only matters when the rail is hidden: collapsed on
+   desktop, or as the drawer trigger on mobile (pure CSS off the html class →
+   no hydration flash). Scoped to .topbar so it outranks .iconbtn's display. */
+.topbar .nav-expand {
+  display: none;
+}
+@media (min-width: 721px) {
+  html.nav-collapsed .topbar .nav-expand {
+    display: inline-flex;
+  }
+}
+@media (max-width: 720px) {
+  .topbar .nav-expand {
+    display: inline-flex;
+  }
 }
 
 .navlabel {

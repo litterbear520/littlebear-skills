@@ -126,16 +126,30 @@ export default function AppShell({
     setDark(next);
   }
 
-  // one button: on mobile it opens the drawer, on desktop it collapses the rail
-  function toggleNav() {
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches) {
-      setOpen((o) => !o);
+  const isMobile = () =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 720px)").matches;
+
+  // collapse from inside the sidebar (mobile: close the drawer; desktop: slide the rail away)
+  function hideSidebar() {
+    if (isMobile()) {
+      setOpen(false);
       return;
     }
-    const next = !document.documentElement.classList.contains("nav-collapsed");
-    document.documentElement.classList.toggle("nav-collapsed", next);
+    document.documentElement.classList.add("nav-collapsed");
     try {
-      localStorage.setItem("wc-nav", next ? "collapsed" : "open");
+      localStorage.setItem("wc-nav", "collapsed");
+    } catch {}
+  }
+
+  // expand from the topbar (mobile: open the drawer; desktop: bring the rail back)
+  function showSidebar() {
+    if (isMobile()) {
+      setOpen(true);
+      return;
+    }
+    document.documentElement.classList.remove("nav-collapsed");
+    try {
+      localStorage.setItem("wc-nav", "open");
     } catch {}
   }
 
@@ -149,9 +163,20 @@ export default function AppShell({
   return (
     <div className="shell">
       <aside className={open ? "sidebar open" : "sidebar"}>
-        <Link href="/" className="brand serif">
-          世界杯<span className="brand-dot">·</span>每日玩法
-        </Link>
+        <div className="brand-row">
+          <Link href="/" className="brand serif">
+            世界杯<span className="brand-dot">·</span>每日玩法
+          </Link>
+          <button
+            type="button"
+            className="iconbtn nav-collapse"
+            onClick={hideSidebar}
+            aria-label="收起侧栏"
+            title="收起侧栏"
+          >
+            <PanelIcon />
+          </button>
+        </div>
 
         <Link href="/profit" className={onProfit ? "navitem active" : "navitem"}>
           <span className="navicon">
@@ -207,10 +232,10 @@ export default function AppShell({
         <div className="topbar">
           <button
             type="button"
-            className="iconbtn"
-            onClick={toggleNav}
-            aria-label="收起 / 展开侧栏"
-            title="收起 / 展开侧栏"
+            className="iconbtn nav-expand"
+            onClick={showSidebar}
+            aria-label="展开侧栏"
+            title="展开侧栏"
           >
             <PanelIcon />
           </button>
