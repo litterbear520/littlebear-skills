@@ -245,11 +245,17 @@ python scripts/fetch_predictions.py upsets --out "$WS/upsets.json"
   "user_bought": {
     "summary": "买了稳健单关 + 平衡 2 串各一注",
     "tickets": [
-      { "tier": "稳健", "type": "单关", "stake": 50,
-        "legs": [ {"text": "比利时 胜", "odds": 1.41, "hit": true} ] },
-      { "tier": "平衡", "type": "2串1", "stake": 40,
-        "legs": [ {"text": "阿根廷 -1", "odds": 1.80, "hit": true},
-                  {"text": "西班牙 胜", "odds": 1.73, "hit": true} ] }
+      { "tier": "稳健", "type": "单关", "stake": 50, "multiple": 25,
+        "legs": [ {"matchNo": "周一014", "home": "比利时", "away": "埃及",
+                   "category": "胜平负", "pick": "胜",
+                   "text": "比利时 胜", "odds": 1.41, "hit": true} ] },
+      { "tier": "平衡", "type": "2串1", "stake": 40, "multiple": 20,
+        "legs": [ {"matchNo": "周一015", "home": "阿根廷", "away": "巴拿马",
+                   "category": "让球胜平负", "pick": "让胜",
+                   "text": "阿根廷 -1", "odds": 1.80, "hit": true},
+                  {"matchNo": "周一016", "home": "西班牙", "away": "瑞士",
+                   "category": "胜平负", "pick": "胜",
+                   "text": "西班牙 胜", "odds": 1.73, "hit": true} ] }
     ],
     "note": "或：没买/只看（tickets 留空）"
   },
@@ -272,7 +278,8 @@ python scripts/fetch_predictions.py upsets --out "$WS/upsets.json"
   "historical_synced": 15                                               // 可选：本次 Track 1 新分析的历史场数
 }
 ```
-- `user_bought.tickets[]`（公网站点「我买的票 + 每日收益」的数据源）：每注一个对象——`tier`（稳健/平衡/激进/自选）、`type`（单关 / N串1，缺省按腿数推）、`stake`（本金 ¥，必填才能算收益）、`legs[{text, odds, hit}]`。`hit` 来自本就要做的 grade（半全场等脚本判不了的腿由用户确认，见上）。`export_site_data.py settle` 据此算：全中→`本金×连乘赔率−本金`、任一腿不中→`−本金`、有腿未结算→pending。用户"只看没买"则 `tickets` 留空（站点显示当日 0 收益）。本金是隐私、只进私有站点仓库。
+- `user_bought.tickets[]`（公网站点「我买的票 + 每日收益」的数据源）：每注一个对象——`tier`（稳健/平衡/激进/自选）、`type`（单关 / N串1，缺省按腿数推）、`stake`（本金 ¥，必填才能算收益）、`multiple`（倍数，如 5 倍；缺省站点按 本金/2 推，竞彩 2 元/注）、`legs[]`。`hit` 来自本就要做的 grade（半全场等脚本判不了的腿由用户确认，见上）。`export_site_data.py settle` 据此算：全中→`本金×连乘赔率−本金`、任一腿不中→`−本金`、有腿未结算→pending。用户"只看没买"则 `tickets` 留空（站点显示当日 0 收益）。本金是隐私、只进私有站点仓库。
+  - **腿字段照实体票填**，站点据此把卡片排成竞彩票面（主队 Vs 客队 / 第N场·编号·玩法类别 / 选择@赔率）：`text`（必填，兜底文案+grade 对账用）、`odds`、`hit` 之外，尽量带上 `matchNo`（赛事编号，如"周五029"）、`home`/`away`（主/客队）、`category`（玩法类别，如"胜平负""半全场胜平负""让球胜平负"）、`pick`（选择，如"胜""负""胜胜""让胜"）。这些都可选——缺了就退回只显示 `text`，但用户给了实体票照片就照着填全，卡片才有票感。
 - `graded[].hit`=命中；`warned_correctly`=陷阱点正确避开（渲染成 ⊘ 琥珀）；其余渲染成 ✗。
 - **半全场/半场等脚本判不了的腿**：`hit` 必须来自**用户确认**（见 SKILL.md 第 R 步 Track 2 "判定分两层"），不要写 null 猜、也不要"存疑"含糊；确实还没结算才用 `null` 并在 `note` 写"待结算"。
 - 渲染位置：三档方案**下方**的"上期复盘回顾"可折叠模块。

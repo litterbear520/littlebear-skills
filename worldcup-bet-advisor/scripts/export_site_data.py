@@ -91,7 +91,12 @@ def settle_ticket(t, idx, date):
     legs, odds_product, have_all_odds = [], 1.0, True
     for leg in t.get("legs", []):
         o = leg.get("odds")
-        legs.append({"text": leg.get("text"), "odds": o, "hit": leg.get("hit")})
+        leg_out = {"text": leg.get("text"), "odds": o, "hit": leg.get("hit")}
+        # 票面结构（可选）：主队/客队/赛事编号/玩法类别/选择，有就带上
+        for k in ("matchNo", "home", "away", "category", "pick"):
+            if leg.get(k) is not None:
+                leg_out[k] = leg.get(k)
+        legs.append(leg_out)
         if o:
             odds_product *= float(o)
         else:
@@ -120,7 +125,7 @@ def settle_ticket(t, idx, date):
 
     n = len(legs)
     ttype = t.get("type") or ("单关" if n == 1 else f"{n}串1")
-    return {
+    out = {
         "id": t.get("id") or f"{date}-{idx}",
         "tier": t.get("tier", "自选"),
         "type": ttype,
@@ -131,6 +136,10 @@ def settle_ticket(t, idx, date):
         "payout": payout,
         "profit": profit,
     }
+    # 倍数（如 5 倍）：有就带上，缺省由前端按 本金/2 推（竞彩 2 元/注）
+    if t.get("multiple") is not None:
+        out["multiple"] = t.get("multiple")
+    return out
 
 
 def cmd_settle(args):

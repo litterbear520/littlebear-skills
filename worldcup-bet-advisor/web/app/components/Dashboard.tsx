@@ -67,7 +67,7 @@ export default function Dashboard({
               <span style={{ color: profitVar(latestSettled.dayProfit) }}>{yuan(latestSettled.dayProfit)}</span>
             </span>
           </h2>
-          <div className="grid-3">
+          <div className="ticket-grid">
             {(latestSettled.tickets ?? []).map((t) => (
               <TicketCard key={t.id} ticket={t} />
             ))}

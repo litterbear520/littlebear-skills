@@ -155,12 +155,155 @@ a {
   margin-right: 1px;
 }
 
-/* per-leg odds: quiet, monospaced-feel @1.45 tag trailing each selection */
-.leg-odds {
+/* ── 票面卡片：照实体竞彩票排版（玩法/倍数/合计 + 逐场 主队 VS 客队 + 结算页脚）── */
+.ticket {
+  position: relative;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-s);
+  padding: 12px 14px 11px;
+  font-size: 14px;
+}
+.ticket[data-status="loss"] {
+  opacity: 0.9;
+}
+
+.ticket-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* leave room on the right so the 「中」 stamp never lands on the 玩法 text */
+  padding: 0 40px 9px 0;
+  border-bottom: 1px dashed var(--border-strong);
+}
+.ticket-tier {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 9%, transparent);
+}
+.ticket-play {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink2);
+}
+
+.ticket-leg {
+  padding: 10px 0 9px;
+}
+.ticket-leg + .ticket-leg {
+  border-top: 1px dashed var(--border);
+}
+
+.leg-top {
   font-size: 12px;
   color: var(--text-tertiary);
+  margin-bottom: 5px;
+}
+.leg-no {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.leg-teams {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--font-serif);
+  font-size: 16.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.leg-teams .vs {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  letter-spacing: 0.08em;
+}
+.ticket-leg.lost .leg-teams .team {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+
+.leg-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  min-height: 20px;
+}
+.leg-pick {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+.pick-sel {
+  font-weight: 600;
+  color: var(--ink);
+}
+.ticket-leg.lost .pick-sel {
+  color: var(--text-tertiary);
+}
+.pick-odds {
+  font-size: 13px;
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
-  margin-left: 5px;
+}
+.hit-y {
+  flex: none;
+  color: var(--success);
+  font-weight: 700;
+}
+.hit-n {
+  flex: none;
+  color: var(--danger);
+  font-weight: 700;
+}
+.hit-p {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.ticket-foot {
+  margin-top: 5px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ticket-foot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.ticket-total {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.foot-l {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.ticket-profit {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* red "中" seal on a won ticket — that stamped, just-cashed feeling */
@@ -190,6 +333,15 @@ a {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+}
+
+/* ticket cards need real width to read as 票面 — fit as many ≥230px columns as
+   the (sidebar-narrowed) content allows, then wrap */
+.ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  align-items: start;
 }
 
 @media (max-width: 720px) {
