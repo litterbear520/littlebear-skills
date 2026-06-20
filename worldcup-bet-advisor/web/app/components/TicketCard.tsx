@@ -11,16 +11,23 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
   const s = STATUS[ticket.status];
   const tierVar = tierColorVar(ticket.tier);
 
+  const isWin = ticket.status === "win";
+
   return (
     <div
       className="card"
       style={{
+        position: "relative",
         background: "var(--bg)",
         borderColor: s.border,
         padding: 14,
         opacity: ticket.status === "loss" ? 0.92 : 1,
       }}
     >
+      {isWin ? (
+        <span className="win-seal" aria-label="已中奖">中</span>
+      ) : null}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span
           className="pill"
@@ -28,7 +35,7 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
         >
           {ticket.tier} · {ticket.type}
         </span>
-        <span style={{ fontSize: 12, color: s.color }}>{s.label}</span>
+        {!isWin ? <span style={{ fontSize: 12, color: s.color }}>{s.label}</span> : null}
       </div>
 
       <ul style={{ listStyle: "none", padding: 0, margin: "10px 0 0", fontSize: 14, lineHeight: 1.6 }}>

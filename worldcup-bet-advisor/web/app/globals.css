@@ -131,6 +131,29 @@ a {
   white-space: nowrap;
 }
 
+/* red "中" seal on a won ticket — that stamped, just-cashed feeling */
+.win-seal {
+  position: absolute;
+  top: 11px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--danger);
+  border-radius: 50%;
+  color: var(--danger);
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  transform: rotate(-11deg);
+  opacity: 0.92;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 35%, transparent);
+  pointer-events: none;
+  user-select: none;
+}
+
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
