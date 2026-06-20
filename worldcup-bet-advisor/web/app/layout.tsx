@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 // Same theme bootstrap as the report: read localStorage["wc-theme"], set
 // data-theme before paint. Keeps the dashboard and the embedded report in sync.
-const themeScript = `(function(){try{var t=localStorage.getItem("wc-theme");if(!t){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();`;
+const themeScript = `(function(){try{var t=localStorage.getItem("wc-theme");if(!t){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);if(localStorage.getItem("wc-nav")==="collapsed"){document.documentElement.classList.add("nav-collapsed");}}catch(e){document.documentElement.setAttribute("data-theme","light");}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

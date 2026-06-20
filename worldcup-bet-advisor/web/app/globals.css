@@ -213,6 +213,14 @@ summary:focus-visible,
   display: flex;
   flex-direction: column;
   gap: 1px;
+  transition: margin-left 0.22s ease;
+}
+
+/* desktop: collapse the sidebar to reclaim space (state on <html>, no flash) */
+@media (min-width: 721px) {
+  html.nav-collapsed .sidebar {
+    margin-left: -250px;
+  }
 }
 
 .brand {
@@ -327,19 +335,20 @@ summary:focus-visible,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
+  width: 36px;
   height: 34px;
   border-radius: 9px;
-  border: 1px solid var(--line2);
-  background: var(--panel);
-  color: var(--ink);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--muted);
   cursor: pointer;
-  font-size: 16px;
+  transition: background 0.14s ease, color 0.14s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 .iconbtn:hover {
   background: var(--panel2);
+  color: var(--ink);
 }
 
 .scrim {
