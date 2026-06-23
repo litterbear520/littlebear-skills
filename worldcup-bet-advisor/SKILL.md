@@ -267,17 +267,20 @@ python scripts/build_report.py --merged "$WS/merged.json" --analysis "$WS/analys
 
 把第 5 步的 `report.html` **原样**搬上一个公网站点（`web/` 里的 Next.js 应用用 iframe 嵌入报告，一字不改），外面只多两样：**日期切换**看当天/往期、**收益仪表盘**看「我买的票」中没中 + 每日收益。机制、隐私边界、一次性设置全在 `references/site-deploy.md`。
 
-默认**私有模式**：报告/本金/收益 gitignore、不进公开仓库，用 `npx vercel --prod` 从本地直推上线（CLI 不读 `.gitignore`，数据上线但不进 GitHub）。
+当前启用**公开模式**：报告/本金/收益**入库**，Vercel 接 GitHub 自动部署，发布 = 出报告 + settle 后 `git add` 数据 → `commit` → `push`（**不用 `--deploy`**），多机(家里/公司)靠 git 同步。私有模式(数据不入库、`npx vercel --prod` CLI 部署)为备选。详见 `references/site-deploy.md`。
 
-一次性设置（`cd web && pnpm install && npx vercel login && npx vercel link`）做过后，发布一条命令：
+发布一条命令（公开模式下**去掉 `--deploy`**，让它只拷报告 + settle，然后自己 git push）：
 
 ```bash
 bash scripts/publish_site.sh \
   --report "$WS/report.html" --analysis "$WS/analysis.json" \
-  ${PREV:+--retro "$PREV/retro.json"} --deploy
+  ${PREV:+--retro "$PREV/retro.json"}        # 公开模式: 不加 --deploy
+# 然后:
+git add worldcup-bet-advisor/web/data worldcup-bet-advisor/web/public/reports && \
+  git commit -m "report: <日期>" && git push   # Vercel 自动上线
 ```
 
-它把 `report.html` 拷进 `web/public/reports/<日期>.html`、登记当天有报告（status=open）；带 `--retro` 时用 `export_site_data.py settle` 回填上一期的票与真实盈亏（status=settled）；`--deploy` 则直接 `npx vercel --prod` 上线。几十秒后刷新链接即可。
+它把 `report.html` 拷进 `web/public/reports/<日期>.html`、登记当天有报告（status=open）；带 `--retro` 时用 `export_site_data.py settle` 回填上一期的票与真实盈亏（status=settled）。公开模式靠 `git push` 触发部署；私有模式才用 `--deploy`(直接 `npx vercel --prod`)。
 
 - **首次/未设置**：先读 `references/site-deploy.md` 走一次性设置，或用官方 `deploy-to-vercel` 技能部署。别默默跳过——告诉用户站点没建、问要不要现在建。
 - **fail-soft**：没装/没登录 Vercel 时不带 `--deploy` 也能把数据备在本地，本地 `report.html` 始终在，不阻塞正事。

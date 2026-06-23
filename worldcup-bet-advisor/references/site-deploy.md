@@ -6,9 +6,9 @@
 
 - **线上站只有你能改**:Vercel 部署绑定的是**你账号下的项目**。别人 `git clone` 你的公开仓库,只能拿到**只读副本**——他们能本地跑、能 fork 出去部署**他们自己的**站,但 push 不进你的仓库、碰不到你的 Vercel 项目。所以「技能共享、部署独占」天然成立:别人 clone 下来只能**用技能生成自己的报告**,改不了你的在线报告。
 - 能改到你线上站的只有:你主动合并别人的 PR / 把人加成协作者 / 凭证泄露。光 clone 做不到。
-- **「读」和「改」分开**:clone 能读仓库里**已提交**的东西。所以下面用**私有模式**——报告/本金/收益**不提交进**公开的 littlebear-skills 仓库,只存在你本地 + 你的 Vercel 站。
+- **「读」和「改」分开**:clone 能读仓库里**已提交**的东西。当前启用**公开模式**(报告/本金/收益入库 + push 自动部署,见下),想改回不公开见「私有模式(备选)」。
 
-## 私有模式(推荐):数据不进 GitHub,CLI 部署
+## 私有模式(备选):数据不进 GitHub,CLI 部署
 
 - **应用代码**(`web/` 下的组件/配置)随 skill 提交进 littlebear-skills——纯前端、可公开。
 - **每天的报告 + 本金 + 收益**(`web/data/*.json`、`web/public/reports/*.html`)被 `.gitignore`,**不进 GitHub**。
@@ -50,15 +50,18 @@ bash scripts/publish_site.sh \
 
 收益仪表盘的累计/柱状图 = 各 `settled` 日 `dayProfit` 汇总(exporter 重建进 `index.json`)。
 
-## 备选:公开模式(push 自动部署)
+## 公开模式(✅ 当前启用):push 自动部署
 
-如果你**不介意**报告/本金/收益在 GitHub 上可读(线上站本来就公开),也可以走你熟悉的网页端导入:
+报告/本金/收益**提交进公开仓库**,Vercel 接 GitHub 自动部署 —— 多机(家里/公司)只靠 `git pull/push` 同步,无需 Vercel CLI。代价:真实本金/收益在公开仓库可读(但别人仍**改不了**你的线上站)。一次性设置:
 
-1. 把 `web/.gitignore` 里 `data/`、`public/reports/` 两行去掉(改成提交数据)。
-2. Vercel Dashboard → Add New Project → Import `litterbear520/littlebear-skills` → **Root Directory** 设成 `worldcup-bet-advisor/web` → Deploy。
-3. 之后 `git push` 即自动部署,`publish_site.sh` 不用 `--deploy`,改成提交 + push。
+1. ✅ `web/.gitignore` 已注释掉 `data/`、`public/reports/` 两行(数据改为入库)。
+2. ✅ Vercel 项目已用 `npx vercel git connect <repo-url>` 连上 `litterbear520/littlebear-skills`。
+3. ⬜ **(需在 Vercel 后台手动设一次)** 项目 `worldcup-bet-site` → Settings → Build and Deployment → **Root Directory** 填 `worldcup-bet-advisor/web` → Save。本仓库是 monorepo、Next.js 应用在子目录,不设这个 Git 构建会在仓库根找不到 `package.json` 而失败。
+4. 之后日常发布 = 出报告 + settle 后 `git add` 数据 → `git commit` → `git push`,Vercel 自动上线;`publish_site.sh` 不再需要 `--deploy`。
 
-代价:你的真实本金/收益在公开仓库里任人可读(但仍**改不了**你的线上站)。
+**多机同步**:任意电脑 `git clone` 本仓库(历史数据随仓库一起下来)+ 配好 litterbear520 的推送凭证(`gh auth login` 登 litterbear520 / PAT / SSH key),即可 `pull → 出报告 → commit → push`。推送权限看的是**登录凭证**,不是 commit 署名。
+
+> 想改回不公开:把 `web/.gitignore` 里那两条 `data/`、`public/reports/` ignore 取消注释,数据回到只存本地 + 经 `.vercelignore` 由 `npx vercel --prod` 上传(见上「私有模式(备选)」),但多机同步需另配私有数据通道。
 
 ## 本地预览
 
