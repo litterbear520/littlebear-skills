@@ -50,6 +50,11 @@ fi
 if ! git -C "$REPO_ROOT" pull --ff-only -q origin "$BR" 2>/dev/null; then
   echo "[update] ⚠ ff-only 拉取失败（本地与远端分叉），跳过、用本地版"; exit 2
 fi
+# 运行副本即仓库工作区（junction/软链，RUNTIME 与 DST 同一实体）：pull 改的就是运行副本，无需镜像。
+if [ "$RUNTIME" -ef "$DST" ]; then
+  echo "[update] ✓ 已更新到最新（运行副本即仓库工作区，无需镜像；请重新读取 SKILL.md / 脚本后再继续）"
+  exit 0
+fi
 # 覆盖式同步(overlay)：把仓库的代码/种子盖到运行副本，但【不删】本地私有文件。
 # experience.local.md / reviewed_matches.json 不在仓库里，自然不会被覆盖；故不做 pre-rm。
 # 注意：上游若删除/重命名了文件，运行副本里的旧文件不会自动消失（罕见，必要时手动清）。
