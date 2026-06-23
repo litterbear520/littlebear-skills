@@ -13,10 +13,11 @@ next-env.d.ts
 .vercel
 .env*.local
 
-# PRIVATE: your daily reports + bets/profit. Stay local; deployed to Vercel via
-# `vercel --prod` (CLI uploads them) but NOT committed to the public repo.
-/data/*.json
-/public/reports/*.html
+# PUBLIC MODE (active): daily reports + bets/profit ARE committed to this repo,
+# and Vercel auto-deploys on push (no `vercel --prod` needed). To switch back to
+# private mode, un-comment the two lines below and deploy via the CLI instead.
+# /data/*.json
+# /public/reports/*.html
 
 # The repo-root .gitignore carries a Python "lib/" rule (packaging artifacts)
 # that would otherwise swallow this Next.js app's own source folder. Re-include

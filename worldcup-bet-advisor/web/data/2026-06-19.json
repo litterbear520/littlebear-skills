@@ -1,0 +1,67 @@
+{
+  "date": "2026-06-19",
+  "weekday": "周五",
+  "hasReport": true,
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-19-0",
+      "tier": "稳健",
+      "type": "单关",
+      "legs": [
+        {
+          "text": "美国 胜（vs 澳大利亚）",
+          "odds": 1.45,
+          "hit": true,
+          "matchNo": "周五029",
+          "home": "美国",
+          "away": "澳大利亚",
+          "category": "胜平负",
+          "pick": "胜"
+        }
+      ],
+      "stake": 10.0,
+      "combinedOdds": 1.45,
+      "status": "win",
+      "payout": 14.5,
+      "profit": 4.5,
+      "multiple": 5
+    },
+    {
+      "id": "2026-06-19-1",
+      "tier": "平衡",
+      "type": "2串1",
+      "legs": [
+        {
+          "text": "苏格兰 负（摩洛哥胜）",
+          "odds": 1.5,
+          "hit": true,
+          "matchNo": "周五030",
+          "home": "苏格兰",
+          "away": "摩洛哥",
+          "category": "胜平负",
+          "pick": "负"
+        },
+        {
+          "text": "巴西 半全场 胜/胜（vs 海地）",
+          "odds": 1.23,
+          "hit": true,
+          "matchNo": "周五031",
+          "home": "巴西",
+          "away": "海地",
+          "category": "半全场胜平负",
+          "pick": "胜胜"
+        }
+      ],
+      "stake": 10.0,
+      "combinedOdds": 1.845,
+      "status": "win",
+      "payout": 18.45,
+      "profit": 8.45,
+      "multiple": 5
+    }
+  ],
+  "dayProfit": 12.95,
+  "dayStake": 20.0,
+  "summary": "两注全中：美国胜单关 + 摩洛哥胜/巴西半全场胜胜 2串1"
+}

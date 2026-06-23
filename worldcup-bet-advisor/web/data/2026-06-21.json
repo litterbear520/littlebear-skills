@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-21",
+  "weekday": "周日",
+  "hasReport": true,
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-21-t1",
+      "tier": "自选·胜平负双选",
+      "type": "2串1",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": null,
+          "odds": 6.76,
+          "hit": true,
+          "pick": "比利时平·埃及负",
+          "stake": 2.0,
+          "payout": 13.52
+        },
+        {
+          "text": null,
+          "odds": 4.88,
+          "hit": false,
+          "pick": "比利时胜·埃及平",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 1.79,
+          "hit": false,
+          "pick": "比利时胜·埃及负",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 18.42,
+          "hit": false,
+          "pick": "比利时平·埃及平",
+          "stake": 2.0
+        }
+      ],
+      "stake": 8.0,
+      "combinedOdds": 0,
+      "status": "win",
+      "payout": 13.52,
+      "profit": 5.52,
+      "multiple": 1
+    },
+    {
+      "id": "2026-06-21-t2",
+      "tier": "自选·混合过关双选",
+      "type": "2串1",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": null,
+          "odds": 6.52,
+          "hit": true,
+          "pick": "西班牙让胜·乌拉圭平",
+          "stake": 2.0,
+          "payout": 13.04
+        },
+        {
+          "text": null,
+          "odds": 2.03,
+          "hit": false,
+          "pick": "西班牙让胜·乌拉圭胜",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 4.72,
+          "hit": false,
+          "pick": "西班牙让负·乌拉圭胜",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 15.19,
+          "hit": false,
+          "pick": "西班牙让负·乌拉圭平",
+          "stake": 2.0
+        }
+      ],
+      "stake": 8.0,
+      "combinedOdds": 0,
+      "status": "win",
+      "payout": 13.04,
+      "profit": 5.04,
+      "multiple": 1
+    }
+  ],
+  "dayProfit": 10.56,
+  "dayStake": 16.0,
+  "summary": "复盘驱动:上期(06-20)被『厄瓜多尔半全场主/主@1.31当稳健→被库拉索0:0偷平』教训(碾压便秘队打密防+神扑门将)。今天4场撞上完全同款结构——4个热门(西/比/乌/埃)首轮全被逼平、对手(沙特/伊朗/佛得角)全是密防偷分专业户。据此三调:①两个可单关腿(乌拉圭胜@1.30、西班牙让-2@1.63)都是厄库同款陷阱,一律剔出稳健,稳健宁缺毋滥到空仓观望;②博冷不再只看『热门有翻车前科』(上期荷兰被日本平→博冷错的教训),改看『前科对手是谁+今天缺谁』——乌拉圭被密防队沙特平+今天缺De Arrascaeta/Araujo两核心+对手佛得角刚0:0零封西班牙,博冷有真实信息差支撑;③每场都做draw_guard(今天是防平日)。DeepSeek续居本届最准(67%):西沙明押『沙特受让、100%不碰让球胜=情感陷阱』,正是逆共识嗅觉;Claude『没有任何悬念3-0』(西沙/乌佛都这么写)按经验=反指标,只取其碾压结构判断、不取其『大热小胜确定性』。"
+}

@@ -1,0 +1,139 @@
+{
+  "date": "2026-06-22",
+  "weekday": "周一",
+  "hasReport": true,
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-22-t1",
+      "tier": "自选·让球+胜平负 双选",
+      "type": "2串1",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": null,
+          "odds": 14.57,
+          "hit": false,
+          "category": "让球+胜平负",
+          "pick": "法国让胜 · 约旦胜",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 9.635,
+          "hit": false,
+          "category": "让球+胜平负",
+          "pick": "法国让胜 · 约旦平",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 13.33,
+          "hit": false,
+          "category": "让球+胜平负",
+          "pick": "法国让负 · 约旦胜",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 8.815,
+          "hit": false,
+          "category": "让球+胜平负",
+          "pick": "法国让负 · 约旦平",
+          "stake": 2.0
+        }
+      ],
+      "stake": 8.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -8.0,
+      "multiple": 1
+    },
+    {
+      "id": "2026-06-22-t2",
+      "tier": "自选·胜平负 双选",
+      "type": "2串1",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": null,
+          "odds": 2.444,
+          "hit": true,
+          "category": "胜平负",
+          "pick": "阿根廷胜 · 挪威胜",
+          "stake": 2.0,
+          "payout": 4.89
+        },
+        {
+          "text": null,
+          "odds": 4.485,
+          "hit": false,
+          "category": "胜平负",
+          "pick": "阿根廷胜 · 挪威平",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 8.084,
+          "hit": false,
+          "category": "胜平负",
+          "pick": "阿根廷平 · 挪威胜",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 14.835,
+          "hit": false,
+          "category": "胜平负",
+          "pick": "阿根廷平 · 挪威平",
+          "stake": 2.0
+        }
+      ],
+      "stake": 8.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 4.89,
+      "profit": -3.11,
+      "multiple": 1
+    },
+    {
+      "id": "2026-06-22-t3",
+      "tier": "自选·比分",
+      "type": "单场固定",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": null,
+          "odds": 32.0,
+          "hit": false,
+          "home": "挪威",
+          "away": "塞内加尔",
+          "category": "比分",
+          "pick": "挪威 2:3 塞内加尔",
+          "stake": 4.0
+        },
+        {
+          "text": null,
+          "odds": 17.0,
+          "hit": true,
+          "home": "挪威",
+          "away": "塞内加尔",
+          "category": "比分",
+          "pick": "挪威 3:2 塞内加尔",
+          "stake": 4.0,
+          "payout": 68.0
+        }
+      ],
+      "stake": 8.0,
+      "combinedOdds": 0,
+      "status": "win",
+      "payout": 68.0,
+      "profit": 60.0,
+      "multiple": 2
+    }
+  ],
+  "dayProfit": 48.89,
+  "dayStake": 24.0,
+  "summary": "复盘驱动:上期(06-21)防平日博冷primary(乌拉圭平@4.05)命中、稳健空仓避损都对,但『嘴上防平、手上把比利时胜串进平衡+激进两档』被0:0打崩——第三次『押死自家draw_guard点名腿』。用户反而用双选(胜+平/让胜+让负)两票全中、净+10.55元,印证防平日该顺着自家点名方向配置。今天非全员防平日——阿根廷(梅西帽子戏法真carry)、法国(去水89%)是真favorite,照常顺;但挪威vs塞内加尔是今日头号防平/博冷点:6/6全押挪威,去水却近五五开(挪48/平25/塞27),塞内加尔首轮上半场全面压制法国(杰克逊中楣+萨尔失单刀)、排名17>挪威26。据此四调:①稳健只取阿根廷胜单关(真carry+奥地利对约旦险胜防线漏),挪威胜坚决不进;②博冷primary反手押塞内加尔不败,并把它放进平衡(顺自家点名向,不再反手押热门);③法国让-3过深(慢热、首轮只赢塞2球)+半全场主主避开(慢热陷阱),用总进球/伊拉克受让+3表达;④DeepSeek独家押约旦不败=其逆共识嗅觉(阿尔及利亚首轮52%控球xG仅0.32便秘),列博冷alt。"
+}

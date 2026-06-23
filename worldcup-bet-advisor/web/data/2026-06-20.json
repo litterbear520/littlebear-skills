@@ -1,0 +1,220 @@
+{
+  "date": "2026-06-20",
+  "weekday": "周六",
+  "hasReport": true,
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-20-t1",
+      "tier": "稳健两腿被串",
+      "type": "2串1",
+      "legs": [
+        {
+          "text": "厄瓜多尔 半全场主/主",
+          "odds": 1.31,
+          "hit": false,
+          "matchNo": "周六035",
+          "home": "厄瓜多尔",
+          "away": "库拉索",
+          "category": "半全场",
+          "pick": "主/主"
+        },
+        {
+          "text": "日本 胜",
+          "odds": 1.37,
+          "hit": true,
+          "matchNo": "周六036",
+          "home": "突尼斯",
+          "away": "日本",
+          "category": "胜平负",
+          "pick": "负(日本胜)"
+        }
+      ],
+      "stake": 10.0,
+      "combinedOdds": 1.79,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -10.0
+    },
+    {
+      "id": "2026-06-20-t2",
+      "tier": "自选",
+      "type": "2串1",
+      "legs": [
+        {
+          "text": "荷兰 不败(胜@1.53/平@3.83复式)",
+          "odds": 1.53,
+          "hit": true,
+          "matchNo": "周六033",
+          "home": "荷兰",
+          "away": "瑞典",
+          "category": "胜平负",
+          "pick": "胜/平"
+        },
+        {
+          "text": "德国 半全场主/主(半场0:1落后→飞)",
+          "odds": 1.88,
+          "hit": false,
+          "matchNo": "周六034",
+          "home": "德国",
+          "away": "科特迪瓦",
+          "category": "半全场",
+          "pick": "主/主"
+        }
+      ],
+      "stake": 8.0,
+      "combinedOdds": 2.88,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -8.0
+    },
+    {
+      "id": "2026-06-20-scores",
+      "tier": "自选",
+      "type": "单场固定",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": "荷兰 2:0",
+          "odds": 8.7,
+          "hit": false,
+          "matchNo": "周六033",
+          "home": "荷兰",
+          "away": "瑞典",
+          "category": "比分",
+          "pick": "2:0",
+          "stake": 2.0
+        },
+        {
+          "text": "荷兰 1:1",
+          "odds": 6.5,
+          "hit": false,
+          "matchNo": "周六033",
+          "home": "荷兰",
+          "away": "瑞典",
+          "category": "比分",
+          "pick": "1:1",
+          "stake": 2.0
+        },
+        {
+          "text": "荷兰 2:1",
+          "odds": 5.0,
+          "hit": false,
+          "matchNo": "周六033",
+          "home": "荷兰",
+          "away": "瑞典",
+          "category": "比分",
+          "pick": "2:1",
+          "stake": 2.0
+        },
+        {
+          "text": "德国 3:1",
+          "odds": 8.25,
+          "hit": false,
+          "matchNo": "周六034",
+          "home": "德国",
+          "away": "科特迪瓦",
+          "category": "比分",
+          "pick": "3:1",
+          "stake": 2.0
+        },
+        {
+          "text": "德国 2:0",
+          "odds": 7.25,
+          "hit": false,
+          "matchNo": "周六034",
+          "home": "德国",
+          "away": "科特迪瓦",
+          "category": "比分",
+          "pick": "2:0",
+          "stake": 2.0
+        },
+        {
+          "text": "德国 2:1",
+          "odds": 6.4,
+          "hit": true,
+          "matchNo": "周六034",
+          "home": "德国",
+          "away": "科特迪瓦",
+          "category": "比分",
+          "pick": "2:1",
+          "stake": 2.0,
+          "payout": 12.8
+        },
+        {
+          "text": "厄瓜多尔 3:1",
+          "odds": 8.75,
+          "hit": false,
+          "matchNo": "周六035",
+          "home": "厄瓜多尔",
+          "away": "库拉索",
+          "category": "比分",
+          "pick": "3:1",
+          "stake": 2.0
+        },
+        {
+          "text": "厄瓜多尔 3:0",
+          "odds": 4.45,
+          "hit": false,
+          "matchNo": "周六035",
+          "home": "厄瓜多尔",
+          "away": "库拉索",
+          "category": "比分",
+          "pick": "3:0",
+          "stake": 2.0
+        },
+        {
+          "text": "厄瓜多尔 2:0",
+          "odds": 4.45,
+          "hit": false,
+          "matchNo": "周六035",
+          "home": "厄瓜多尔",
+          "away": "库拉索",
+          "category": "比分",
+          "pick": "2:0",
+          "stake": 2.0
+        },
+        {
+          "text": "日本 0:3",
+          "odds": 9.5,
+          "hit": false,
+          "matchNo": "周六036",
+          "home": "突尼斯",
+          "away": "日本",
+          "category": "比分",
+          "pick": "0:3",
+          "stake": 2.0
+        },
+        {
+          "text": "日本 0:1",
+          "odds": 6.4,
+          "hit": false,
+          "matchNo": "周六036",
+          "home": "突尼斯",
+          "away": "日本",
+          "category": "比分",
+          "pick": "0:1",
+          "stake": 2.0
+        },
+        {
+          "text": "日本 0:2",
+          "odds": 5.3,
+          "hit": false,
+          "matchNo": "周六036",
+          "home": "突尼斯",
+          "away": "日本",
+          "category": "比分",
+          "pick": "0:2",
+          "stake": 2.0
+        }
+      ],
+      "stake": 24.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 12.8,
+      "profit": -11.2
+    }
+  ],
+  "dayProfit": -29.2,
+  "dayStake": 42.0
+}
