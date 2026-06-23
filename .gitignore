@@ -224,3 +224,6 @@ __marimo__/
 # experience.seed.md 是版本化的共享基线；experience.local.md 是本机实时累计
 **/references/experience.local.md
 **/references/reviewed_matches.json
+
+# Skill 自更新本机缓存（上次检查日期 + 已对齐的 commit sha，各装机独立、不入库）
+**/.self_update.json
