@@ -8,6 +8,8 @@ import { yuan, plainYuan, odds, tierColorVar } from "@/lib/format";
 export default function TicketCard({ ticket }: { ticket: Ticket }) {
   const tierVar = tierColorVar(ticket.tier);
   const isWin = ticket.status === "win";
+  // 「中」章：只要有命中（哪怕净亏）就盖——中了就是中了；盈亏颜色仍按净结果。
+  const hasHit = ticket.legs.some((l) => l.hit === true);
   const profitColor = isWin
     ? "var(--success)"
     : ticket.status === "loss"
@@ -26,8 +28,8 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
 
   return (
     <div className="ticket" data-status={ticket.status}>
-      {isWin ? (
-        <span className="win-seal" aria-label="已中奖">中</span>
+      {hasHit ? (
+        <span className="win-seal" aria-label={isWin ? "已中奖" : "有命中"}>中</span>
       ) : null}
 
       <div className="ticket-head">
@@ -116,6 +118,7 @@ function IndependentTicket({
 }) {
   const isWin = ticket.status === "win";
   const hitCount = ticket.legs.filter((l) => l.hit === true).length;
+  const hasHit = hitCount > 0;
   // 按场分组（保序）
   const groups: { key: string; matchNo?: string; home?: string; away?: string; legs: TicketLeg[] }[] = [];
   for (const leg of ticket.legs) {
@@ -130,8 +133,8 @@ function IndependentTicket({
 
   return (
     <div className="ticket" data-status={ticket.status}>
-      {isWin ? (
-        <span className="win-seal" aria-label="已中奖">中</span>
+      {hasHit ? (
+        <span className="win-seal" aria-label={isWin ? "已中奖" : "有命中"}>中</span>
       ) : null}
 
       <div className="ticket-head">
