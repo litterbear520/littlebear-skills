@@ -227,3 +227,7 @@ __marimo__/
 
 # Skill 自更新本机缓存（上次检查日期 + 已对齐的 commit sha，各装机独立、不入库）
 **/.self_update.json
+
+# macOS 桌面元数据垃圾文件（任何目录下都忽略）
+.DS_Store
+**/.DS_Store
