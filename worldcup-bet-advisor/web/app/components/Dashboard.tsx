@@ -36,7 +36,7 @@ export default function Dashboard({
             <span className="muted">{plainYuan(index.totalStake)}</span>
           </span>
           <span>
-            <span className="dim">命中率 </span>
+            <span className="dim">盈利率 </span>
             <span className="muted">
               {winRate != null ? `${winRate}% (${index.winTickets}/${index.totalTickets})` : "—"}
             </span>
