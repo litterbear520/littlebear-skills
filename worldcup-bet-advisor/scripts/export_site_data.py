@@ -88,21 +88,64 @@ def cmd_day(args):
 
 
 def settle_ticket(t, idx, date):
+    raw_legs = t.get("legs", [])
+    stake = float(t.get("stake", 0) or 0)
+    # 独立多注票（如「单场固定」一张票选多场多个比分）：每注各自单关、独立结算，
+    # 盈亏 = Σ(命中注 本金×赔率 − 本金)，不连乘。每注本金缺省按 总本金/注数 均摊。
+    independent = t.get("mode") == "independent"
+
     legs, odds_product, have_all_odds = [], 1.0, True
-    for leg in t.get("legs", []):
+    per_default = round(stake / len(raw_legs), 2) if independent and raw_legs else None
+    indep_payout, indep_profit, indep_pending = 0.0, 0.0, False
+    for leg in raw_legs:
         o = leg.get("odds")
         leg_out = {"text": leg.get("text"), "odds": o, "hit": leg.get("hit")}
         # 票面结构（可选）：主队/客队/赛事编号/玩法类别/选择，有就带上
         for k in ("matchNo", "home", "away", "category", "pick"):
             if leg.get(k) is not None:
                 leg_out[k] = leg.get(k)
+        if independent:
+            ls = float(leg.get("stake", per_default) or 0)
+            leg_out["stake"] = ls
+            if leg.get("hit") is True and o:
+                leg_out["payout"] = round(ls * float(o), 2)
+                indep_payout += ls * float(o)
+                indep_profit += ls * float(o) - ls
+            elif leg.get("hit") is False:
+                indep_profit -= ls
+            elif leg.get("hit") is None:
+                indep_pending = True
         legs.append(leg_out)
         if o:
             odds_product *= float(o)
         else:
             have_all_odds = False
 
-    hits = [leg.get("hit") for leg in t.get("legs", [])]
+    if independent:
+        if indep_pending:
+            status = "pending"
+            payout, profit = 0.0, 0.0
+        else:
+            payout = round(indep_payout, 2)
+            profit = round(indep_profit, 2)
+            status = "win" if profit > 0 else "loss"
+        out = {
+            "id": t.get("id") or f"{date}-{idx}",
+            "tier": t.get("tier", "自选"),
+            "type": t.get("type") or "单场固定",
+            "mode": "independent",
+            "legs": legs,
+            "stake": stake,
+            "combinedOdds": 0,
+            "status": status,
+            "payout": payout,
+            "profit": profit,
+        }
+        if t.get("multiple") is not None:
+            out["multiple"] = t.get("multiple")
+        return out
+
+    hits = [leg.get("hit") for leg in raw_legs]
     if any(h is False for h in hits):
         status = "loss"
     elif any(h is None for h in hits):
@@ -114,7 +157,6 @@ def settle_ticket(t, idx, date):
     if combined is None and have_all_odds:
         combined = round(odds_product, 2)
 
-    stake = float(t.get("stake", 0) or 0)
     if status == "win" and combined:
         payout = round(stake * float(combined), 2)
         profit = round(payout - stake, 2)

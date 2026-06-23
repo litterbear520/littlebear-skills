@@ -5,10 +5,10 @@ import TicketCard from "./TicketCard";
 
 export default function Dashboard({
   index,
-  latestSettled,
+  settledDays: settledDaysData,
 }: {
   index: SiteIndex;
-  latestSettled: DayData | null;
+  settledDays: DayData[];
 }) {
   const winRate =
     index.totalTickets > 0 ? Math.round((index.winTickets / index.totalTickets) * 100) : null;
@@ -53,22 +53,22 @@ export default function Dashboard({
         <ProfitLine series={index.profitSeries} />
       </div>
 
-      {latestSettled && (latestSettled.tickets ?? []).length > 0 ? (
-        <>
+      {settledDaysData.filter((d) => (d.tickets ?? []).length > 0).map((day, di) => (
+        <section key={day.date} style={{ marginTop: di === 0 ? undefined : 26 }}>
           <h2 className="section-title">
-            最近一期 · 我买的票
+            {di === 0 ? "我买的票" : "往期 · 我买的票"}
             <span className="dim" style={{ fontSize: 13, fontWeight: 400 }}>
-              {latestSettled.date} {weekdayOf(latestSettled.date, latestSettled.weekday)} · 当日{" "}
-              <span style={{ color: profitVar(latestSettled.dayProfit) }}>{yuan(latestSettled.dayProfit)}</span>
+              {day.date} {weekdayOf(day.date, day.weekday)} · 当日{" "}
+              <span style={{ color: profitVar(day.dayProfit) }}>{yuan(day.dayProfit)}</span>
             </span>
           </h2>
           <div className="ticket-grid">
-            {(latestSettled.tickets ?? []).map((t) => (
+            {(day.tickets ?? []).map((t) => (
               <TicketCard key={t.id} ticket={t} />
             ))}
           </div>
-        </>
-      ) : null}
+        </section>
+      ))}
 
       {settledDays.length > 0 ? (
         <>

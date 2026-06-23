@@ -14,6 +14,8 @@ export type TicketLeg = {
   away?: string; // 客队
   category?: string; // 玩法类别，如 "胜平负" / "半全场胜平负"
   pick?: string; // 选择文案，如 "胜" / "负" / "胜胜"
+  stake?: number; // 独立多注票里该注本金（如「单场固定」每注 2 元）
+  payout?: number; // 独立多注票里该注命中回报
 };
 
 export type TicketStatus = "win" | "loss" | "pending";
@@ -21,7 +23,8 @@ export type TicketStatus = "win" | "loss" | "pending";
 export type Ticket = {
   id: string;
   tier: string; // 稳健 / 平衡 / 激进 / 自选
-  type: string; // 单关 / 2串1 / 3串1 …
+  type: string; // 单关 / 2串1 / 3串1 / 单场固定 …
+  mode?: "independent"; // 独立多注票：每注各自单关、独立结算（不连乘）
   legs: TicketLeg[];
   stake: number;
   multiple?: number; // 倍数（如 5 倍）；缺省按 本金/2 推（竞彩 2 元/注）
