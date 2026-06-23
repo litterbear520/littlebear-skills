@@ -6,7 +6,7 @@
 
 抓数据 · 多步判断 · 出精美报告——脚本管确定性、模型管判断，结果可复现、省 token。
 
-[![license](https://img.shields.io/badge/license-MIT-C15F3C?style=flat-square)](./LICENSE) ![skills](https://img.shields.io/badge/skills-2-C15F3C?style=flat-square) [![Agent Skills](https://img.shields.io/badge/standard-Agent_Skills-3b3b3b?style=flat-square)](https://agentskills.io)
+[![license](https://img.shields.io/badge/license-MIT-C15F3C?style=flat-square)](./LICENSE) ![skills](https://img.shields.io/badge/skills-2-C15F3C?style=flat-square) [![Agent Skills](https://img.shields.io/badge/standard-Agent_Skills-3b3b3b?style=flat-square)](https://agentskills.io) [![live demo](https://img.shields.io/badge/live-每日报告在线看-C15F3C?style=flat-square&logo=vercel)](https://worldcup-bet-site.vercel.app)
 
 适用于 Claude Code · Cursor · Codex · OpenCode 等支持 Agent Skills 的工具
 
@@ -68,6 +68,10 @@ Copy-Item -Recurse littlebear-skills\worldcup-bet-advisor "$HOME\.claude\skills\
 > 不替你下注——把一堆球评和实时赔率揉碎了喂给你，只帮你看清哪儿有价值、哪儿是坑。
 
 把「最近几场世界杯怎么买」变成一份**三档玩法方案** + 一份单文件 HTML 报告。
+
+**在线看**：作者每天的实战报告 + 收益仪表盘已发布到公网 → **<https://worldcup-bet-site.vercel.app>** —— 报告版式原样嵌入，外加日期切换看往期、收益仪表盘看「我买的票」中没中与每日盈亏。
+
+> 这是作者的实例；你装了技能后生成的是**你自己的本地报告**，想同样发上线（一条命令推 Vercel）见 [site-deploy.md](./worldcup-bet-advisor/references/site-deploy.md)。
 
 - 综合多个 AI agent（默认 Claude + DeepSeek）的预测比分与讨论
 - 叠加当天全部玩法的实时倍率（胜平负 / 让球 / 比分 / 总进球 / 半全场），**去水校验**找价值点与陷阱点
