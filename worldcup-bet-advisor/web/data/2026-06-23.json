@@ -11,7 +11,7 @@
       "legs": [
         {
           "text": "葡萄牙 让胜(-2)",
-          "odds": 2.3263,
+          "odds": 1.3263,
           "hit": true,
           "home": "葡萄牙",
           "away": "乌兹别克斯坦",
@@ -20,10 +20,10 @@
         }
       ],
       "stake": 10.0,
-      "combinedOdds": 2.3263,
+      "combinedOdds": 1.3263,
       "status": "win",
-      "payout": 23.26,
-      "profit": 13.26,
+      "payout": 13.26,
+      "profit": 3.26,
       "multiple": 1
     },
     {
@@ -62,7 +62,7 @@
       "martingale": true
     }
   ],
-  "dayProfit": 9.26,
+  "dayProfit": -0.74,
   "dayStake": 14.0,
   "summary": "今天 4 场都看好强队赢，但能放心单买的只有克罗地亚一场，其余三场要么封盘、要么大让球容易『赢得不够』，所以**只锁稳的、让球收着买、重点防一场冷平**。"
 }

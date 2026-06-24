@@ -13,7 +13,7 @@
       "weekday": "周二",
       "status": "settled",
       "hasReport": true,
-      "dayProfit": 9.26
+      "dayProfit": -0.74
     },
     {
       "date": "2026-06-22",
@@ -52,7 +52,7 @@
     "2026-06-20",
     "2026-06-19"
   ],
-  "cumulativeProfit": 52.46,
+  "cumulativeProfit": 42.46,
   "totalStake": 116.0,
   "totalTickets": 12,
   "winTickets": 6,
@@ -75,7 +75,7 @@
     },
     {
       "date": "2026-06-23",
-      "profit": 9.26
+      "profit": -0.74
     }
   ],
   "martingale": {
