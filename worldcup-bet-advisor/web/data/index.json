@@ -11,9 +11,9 @@
     {
       "date": "2026-06-23",
       "weekday": "周二",
-      "status": "open",
+      "status": "settled",
       "hasReport": true,
-      "dayProfit": null
+      "dayProfit": 35.79
     },
     {
       "date": "2026-06-22",
@@ -52,10 +52,10 @@
     "2026-06-20",
     "2026-06-19"
   ],
-  "cumulativeProfit": 43.2,
-  "totalStake": 102.0,
-  "totalTickets": 10,
-  "winTickets": 5,
+  "cumulativeProfit": 78.99,
+  "totalStake": 136.0,
+  "totalTickets": 12,
+  "winTickets": 6,
   "profitSeries": [
     {
       "date": "2026-06-19",
@@ -72,6 +72,51 @@
     {
       "date": "2026-06-22",
       "profit": 48.89
+    },
+    {
+      "date": "2026-06-23",
+      "profit": 35.79
     }
-  ]
+  ],
+  "martingale": {
+    "baseUnit": 2.0,
+    "scoresPerRound": 2,
+    "assumedOdds": 6.0,
+    "current": {
+      "layer": 1,
+      "multiple": 1,
+      "cumLoss": 4.0,
+      "rounds": [
+        {
+          "date": "2026-06-23",
+          "multiple": 1,
+          "perScore": 2.0,
+          "total": 4.0,
+          "status": "loss",
+          "profit": -4.0,
+          "won": false,
+          "hitPick": null,
+          "hitOdds": null,
+          "payout": 0.0
+        }
+      ],
+      "nextLayer": 2,
+      "nextMultiple": 2,
+      "nextPerScore": 4.0,
+      "nextTotal": 8.0,
+      "nextNetIfHit": 12.0
+    },
+    "history": [
+      {
+        "wonDate": "2026-06-22",
+        "layers": 2,
+        "multiple": 2,
+        "hitPick": "挪威 3:2 塞内加尔",
+        "hitOdds": 17.0,
+        "payout": 68.0,
+        "cost": 12.0,
+        "net": 56.0
+      }
+    ]
+  }
 }

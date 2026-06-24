@@ -152,16 +152,27 @@ BRAND_SVG = {
     "DeepSeek": ("#4D6BFE", f'<path d="{_P_DEEPSEEK}"/>'),
     "GPT":      ("mono",    f'<path d="{_P_OPENAI}"/>'),
     "OpenAI":   ("mono",    f'<path d="{_P_OPENAI}"/>'),
-    "Gemini":   ("grad",    ('<defs><linearGradient id="gemg" x1="0" y1="0" x2="24" y2="24" '
-                             'gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4285F4"/>'
-                             '<stop offset=".5" stop-color="#9168C0"/><stop offset="1" '
-                             f'stop-color="#D96570"/></linearGradient></defs><path fill="url(#gemg)" d="{_P_GEMINI}"/>')),
+    "Gemini":   ("grad",    _P_GEMINI),  # 渐变在 brand_icon 里按实例生成唯一 id（见 _GEM）
     "GLM":      ("mono",    f'<path d="{_P_GLM}"/>'),
     "Kimi":     ("mono",    f'<path d="{_P_KIMI}"/>'),
 }
 _BRAND_ALIAS = {"claude": "Claude", "deepseek": "DeepSeek", "gpt": "GPT", "openai": "GPT",
                 "chatgpt": "GPT", "gemini": "Gemini", "glm": "GLM", "zhipu": "GLM",
                 "kimi": "Kimi", "moonshot": "Kimi"}
+
+# Gemini 是唯一用渐变填充的图标。整页若复用同一个 id="gemg"，Safari/部分 WebKit 会
+# 因「重复 id 的 paint server」解析失败而把星形画成透明（暗色背景下=看不见）。
+# 故每个实例生成一个唯一 id，让每个 <svg> 自包含、跨浏览器都稳。
+_GEM = [0]
+
+
+def _gemini_svg():
+    _GEM[0] += 1
+    gid = f"gemg{_GEM[0]}"
+    return (f'<defs><linearGradient id="{gid}" x1="0" y1="0" x2="24" y2="24" '
+            f'gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4285F4"/>'
+            f'<stop offset=".5" stop-color="#9168C0"/><stop offset="1" stop-color="#D96570"/>'
+            f'</linearGradient></defs><path fill="url(#{gid})" d="{_P_GEMINI}"/>')
 
 
 def brand_icon(brand, cls=""):
@@ -172,7 +183,7 @@ def brand_icon(brand, cls=""):
         return f'<span class="bic gen {cls}">{esc(key[:1].upper() or "?")}</span>'
     c, inner = spec
     if c == "grad":
-        return f'<span class="bic {cls}"><svg viewBox="0 0 24 24" aria-hidden="true">{inner}</svg></span>'
+        return f'<span class="bic {cls}"><svg viewBox="0 0 24 24" aria-hidden="true">{_gemini_svg()}</svg></span>'
     if c == "mono":
         return f'<span class="bic mono {cls}"><svg viewBox="0 0 24 24" aria-hidden="true">{inner}</svg></span>'
     return f'<span class="bic {cls}" style="color:{c}"><svg viewBox="0 0 24 24" aria-hidden="true">{inner}</svg></span>'

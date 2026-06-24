@@ -130,7 +130,8 @@
       "status": "win",
       "payout": 68.0,
       "profit": 60.0,
-      "multiple": 2
+      "multiple": 2,
+      "martingale": true
     }
   ],
   "dayProfit": 48.89,

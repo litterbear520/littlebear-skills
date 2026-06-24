@@ -2,9 +2,67 @@
   "date": "2026-06-23",
   "weekday": "周二",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null,
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-23-t1",
+      "tier": "自选·让球",
+      "type": "单关",
+      "legs": [
+        {
+          "text": "葡萄牙 让胜(-2)",
+          "odds": 2.3263,
+          "hit": true,
+          "home": "葡萄牙",
+          "away": "乌兹别克斯坦",
+          "category": "让球胜平负",
+          "pick": "让胜"
+        }
+      ],
+      "stake": 30.0,
+      "combinedOdds": 2.3263,
+      "status": "win",
+      "payout": 69.79,
+      "profit": 39.79,
+      "multiple": 1
+    },
+    {
+      "id": "2026-06-23-t2",
+      "tier": "自选·比分叠层",
+      "type": "单场固定",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": null,
+          "odds": 6.5,
+          "hit": false,
+          "home": "巴拿马",
+          "away": "克罗地亚",
+          "category": "比分",
+          "pick": "0:2",
+          "stake": 2.0
+        },
+        {
+          "text": null,
+          "odds": 5.7,
+          "hit": false,
+          "home": "哥伦比亚",
+          "away": "刚果民主共和国",
+          "category": "比分",
+          "pick": "2:0",
+          "stake": 2.0
+        }
+      ],
+      "stake": 4.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -4.0,
+      "multiple": 1,
+      "martingale": true
+    }
+  ],
+  "dayProfit": 35.79,
+  "dayStake": 34.0,
   "summary": "今天 4 场都看好强队赢，但能放心单买的只有克罗地亚一场，其余三场要么封盘、要么大让球容易『赢得不够』，所以**只锁稳的、让球收着买、重点防一场冷平**。"
 }

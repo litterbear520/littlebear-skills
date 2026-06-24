@@ -2,6 +2,7 @@ import type { SiteIndex, DayData } from "@/lib/types";
 import { yuan, plainYuan, profitVar, weekdayOf } from "@/lib/format";
 import ProfitLine from "./ProfitLine";
 import TicketCard from "./TicketCard";
+import MartingalePanel from "./MartingalePanel";
 
 export default function Dashboard({
   index,
@@ -52,6 +53,8 @@ export default function Dashboard({
         <div className="dim" style={{ fontSize: 13, marginBottom: 8 }}>累计收益曲线</div>
         <ProfitLine series={index.profitSeries} />
       </div>
+
+      {index.martingale ? <MartingalePanel m={index.martingale} /> : null}
 
       {settledDaysData.filter((d) => (d.tickets ?? []).length > 0).map((day, di) => (
         <section key={day.date} style={{ marginTop: di === 0 ? undefined : 26 }}>
