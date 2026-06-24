@@ -16,6 +16,16 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WEB="$(cd "$HERE/../web" && pwd)"
 
+# 选一个真正能跑的 Python。Mac/Linux 一般是 python3；但 Windows(Git Bash) 的 python3 常是
+# 失效的应用商店占位符——command -v 找得到、真跑却报错——所以逐个候选「试运行」，取第一个跑通的。
+PY=""
+for _c in python3 python; do
+  if command -v "$_c" >/dev/null 2>&1 && "$_c" -c 'import sys' >/dev/null 2>&1; then
+    PY="$_c"; break
+  fi
+done
+[ -n "$PY" ] || { echo "[publish] 找不到可用的 Python（试过 python3 / python）" >&2; exit 1; }
+
 ANALYSIS=""; RETRO=""; DATE=""; REPORT=""; DEPLOY=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -30,7 +40,7 @@ done
 
 # 日期：优先 --date，否则从 analysis.meta.date 解析
 if [ -z "$DATE" ] && [ -n "$ANALYSIS" ]; then
-  DATE="$(python3 -c "import json,re,sys; d=json.load(open(sys.argv[1])); m=re.match(r'(\d{4}-\d{2}-\d{2})', str(d.get('meta',{}).get('date',''))); print(m.group(1) if m else '')" "$ANALYSIS" 2>/dev/null || true)"
+  DATE="$("$PY" -c "import json,re,sys; d=json.load(open(sys.argv[1])); m=re.match(r'(\d{4}-\d{2}-\d{2})', str(d.get('meta',{}).get('date',''))); print(m.group(1) if m else '')" "$ANALYSIS" 2>/dev/null || true)"
 fi
 
 # ① 拷报告
@@ -44,11 +54,11 @@ fi
 # ② 写仪表盘数据
 mkdir -p "$WEB/data"
 if [ -n "$DATE" ] || [ -n "$ANALYSIS" ]; then
-  python3 "$HERE/export_site_data.py" day \
+  "$PY" "$HERE/export_site_data.py" day \
     ${ANALYSIS:+--analysis "$ANALYSIS"} ${DATE:+--date "$DATE"} --site-data "$WEB/data"
 fi
 if [ -n "$RETRO" ]; then
-  python3 "$HERE/export_site_data.py" settle --retro "$RETRO" --site-data "$WEB/data"
+  "$PY" "$HERE/export_site_data.py" settle --retro "$RETRO" --site-data "$WEB/data"
 fi
 
 # ③ 部署
