@@ -172,7 +172,8 @@ python scripts/fetch_predictions.py upsets --out "$WS/upsets.json"
     "date": "2026-06-15 周一",
     "generated_at": "YYYY-MM-DD HH:MM",
     "selected_agents": ["Claude", "DeepSeek"],
-    "risk_note": "一句话总基调（可选）"
+    "risk_note": "一句话定调：今天整体怎么打、最该当心什么（报告开头门面，大白话、≤40字，可选）",
+    "summary_points": ["2~4 条今日要点，每条一个意思、大白话、可用 **关键词**: 起头加粗；别堆成一整段、别夹英文黑话（写法见 SKILL.md 第4步「门面摘要」）"]
   },
   "matches": [
     {
