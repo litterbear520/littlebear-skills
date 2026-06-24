@@ -691,6 +691,76 @@ def render_schedule(order):
       <div class="sch-grid">{cards}</div></section>'''
 
 
+SEL_IDX = {"H": 0, "D": 1, "A": 2}  # selection_code → 盘口选项次序（spf:[胜,平,负] / rqspf:[让胜,让平,让负]）
+
+
+def render_model_bets(order):
+    """嘉豪 · 各模型下注一览：tab 切换比赛，每场把各模型图标落到它们在嘉豪实际下注的盘口选项格上。
+    数据全部来自 models[].bet（pool_code 定盘口 HAD/HHAD、selection_code 定选项格 H/D/A），不依赖 lean。"""
+    def has_bet(mm):
+        return mm.get("has_bet") and isinstance(mm.get("bet"), dict)
+
+    if not any(any(has_bet(mm) for mm in m.get("models", [])) for m in order):
+        return ""
+    heads, panels, n = "", "", 0
+    for m in order:
+        models = m.get("models", [])
+        pools = [mm["bet"].get("pool_code") for mm in models if has_bet(mm) and mm["bet"].get("pool_code")]
+        if not pools:
+            continue
+        pool = max(set(pools), key=pools.count)  # 主盘口：下注模型里出现最多的 pool_code
+        ta, tb = esc(m["team_a"]), esc(m["team_b"])
+        mk = m.get("markets", {})
+        if pool == "HHAD":
+            outs = (mk.get("rqspf", {}) or {}).get("outcomes", [])
+            line = esc(str((mk.get("rqspf", {}) or {}).get("line", "")))
+            pool_label = f"让球盘 · {ta} {line}"
+            names = [f"{ta} 赢盘", "走盘 (平)", f"{tb} 赢盘"]
+        else:
+            outs = (mk.get("spf", {}) or {}).get("outcomes", [])
+            pool_label = "标准盘 · 胜平负"
+            names = [esc(o.get("label", "")) for o in outs]
+        if not outs:
+            continue
+        odds = [o.get("odds") for o in outs]
+        buckets = [[], [], []]
+        for mm in models:
+            if not has_bet(mm) or mm["bet"].get("pool_code") != pool:
+                continue
+            gi = SEL_IDX.get(mm["bet"].get("selection_code"))
+            if gi is not None and gi < 3:
+                buckets[gi].append(mm.get("brand"))
+        total = sum(len(b) for b in buckets)
+        topn = max((len(b) for b in buckets), default=0)
+        cells = ""
+        for gi in range(min(3, len(outs))):
+            brands = buckets[gi]
+            hot = " hot" if brands and len(brands) == topn else ""
+            icons = ("".join(f'<span class="mb-ic">{brand_icon(b)}<i>{esc(b)}</i></span>' for b in brands)
+                     or '<span class="mb-empty">—</span>')
+            cnt = f'<span class="mb-cnt">{len(brands)}/{total}</span>' if brands else ""
+            od = f'<span class="mb-odds">@{odds[gi]}</span>' if odds[gi] is not None else ""
+            nm = names[gi] if gi < len(names) else ""
+            cells += (f'<div class="mb-cell{hot}"><div class="mb-opt">'
+                      f'<span class="mb-name">{nm}</span>{od}{cnt}</div>'
+                      f'<div class="mb-icons">{icons}</div></div>')
+        on = " on" if n == 0 else ""
+        heads += (f'<button class="tab mb-tab{on}" type="button" role="tab" data-i="{n}">'
+                  f'<span class="tt"><span class="tn">{ta}<i>vs</i>{tb}</span></span></button>')
+        panels += (f'<div class="tab-panel mb-panel{on}" role="tabpanel" data-i="{n}">'
+                   f'<div class="mb-pool">{pool_label}</div>'
+                   f'<div class="mb-grid">{cells}</div></div>')
+        n += 1
+    if not panels:
+        return ""
+    return (f'<section class="modelbets reveal" id="modelbets">'
+            f'<div class="mb-head"><span class="mb-k">⬡ 嘉豪预测</span>'
+            f'<h2 class="mb-title">各模型下注一览</h2></div>'
+            f'<p class="mb-intro">六个模型在嘉豪平台对每场的实际下注落位——点上方标签切换比赛，'
+            f'高亮格是当前最多模型押的方向。</p>'
+            f'<div class="tabs mb-tabs"><div class="tabs-head" role="tablist">{heads}</div>{panels}</div></section>')
+
+
 CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -817,6 +887,31 @@ a{color:inherit}
 .bic.mono{color:var(--brand-mono)}
 .bic.gen{font-size:11px;font-weight:800;color:var(--ink2);font-family:"Fraunces",serif}
 /* plans — 三档：聚焦切换 Tabs（一次看一档，选中档独占全宽面板） */
+.modelbets{margin-bottom:50px}
+.mb-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.mb-k{font-size:12px;font-weight:700;color:var(--clay-d);letter-spacing:.04em}
+.mb-title{font-family:"Fraunces",Georgia,serif;font-size:21px;font-weight:600;color:var(--ink)}
+.mb-intro{font-size:13px;color:var(--ink2);margin-bottom:16px;line-height:1.6;max-width:75ch}
+.mb-tabs .tabs-head{flex-wrap:wrap}
+.mb-tab{flex:1 1 auto;min-width:150px;justify-content:center;padding:13px 14px}
+.mb-tab .tt{min-width:0}
+.mb-tab .tn{font-size:13.5px;font-weight:700;color:var(--ink2);font-family:"Fraunces",Georgia,serif}
+.mb-tab.on .tn{color:var(--clay-d)}
+.mb-tab .tn i{color:var(--muted);font-style:normal;font-weight:400;margin:0 5px}
+.mb-pool{display:inline-block;font-size:12px;font-weight:700;color:var(--ink2);background:var(--paper2);border:1px solid var(--line);border-radius:20px;padding:3px 12px;margin-bottom:16px}
+.mb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.mb-cell{border:1px solid var(--line);border-radius:12px;padding:13px 13px 15px;background:var(--panel2);display:flex;flex-direction:column;gap:10px;min-height:94px}
+.mb-cell.hot{border-color:color-mix(in srgb,var(--clay) 45%,var(--line));background:var(--clay-t)}
+.mb-opt{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.mb-name{font-weight:700;font-size:13.5px;color:var(--ink)}
+.mb-odds{font-variant-numeric:tabular-nums;color:var(--clay-d);font-weight:700;font-size:13px}
+.mb-cnt{margin-left:auto;font-size:11px;font-variant-numeric:tabular-nums;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:1px 7px}
+.mb-icons{display:flex;flex-wrap:wrap;gap:8px 11px;align-items:center}
+.mb-ic{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink2)}
+.mb-ic i{font-style:normal}
+.mb-ic .bic{width:18px;height:18px;flex:none}
+.mb-empty{color:var(--muted);font-size:18px;line-height:1}
+@media(max-width:640px){.mb-grid{grid-template-columns:1fr}.mb-tab{min-width:0;flex:1 1 42%}}
 .plans-tabs{margin-bottom:50px}
 .tabs{--pa:var(--clay);--pa-d:var(--clay-d);--pa-t:var(--clay-t);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
 .tabs-head{display:flex;background:var(--panel2);border-bottom:1px solid var(--line)}
@@ -1140,15 +1235,17 @@ MAIN_JS = """
  lbl();
  if(tb)tb.addEventListener('click',function(){var d=root.getAttribute('data-theme')==='dark',n=d?'light':'dark';
   root.setAttribute('data-theme',n);try{localStorage.setItem('wc-theme',n)}catch(e){}lbl();});
- // 三档 Tabs：点标签切换，一次聚焦一档（PDF 导出时由 @media print 把三档全展开）
- var tabs=[].slice.call(document.querySelectorAll('.tab'));
- var panels=[].slice.call(document.querySelectorAll('.tab-panel'));
- tabs.forEach(function(t){t.addEventListener('click',function(){
-  var i=t.getAttribute('data-i');
-  tabs.forEach(function(x){x.classList.remove('on');});
-  panels.forEach(function(x){x.classList.remove('on');});
-  t.classList.add('on');
-  var p=document.querySelector('.tab-panel[data-i="'+i+'"]');if(p)p.classList.add('on');});});
+ // Tabs：每个 .tabs 容器内部独立切换（三档方案、各模型下注各一组，互不串台；PDF 导出时由 @media print 全展开）
+ [].slice.call(document.querySelectorAll('.tabs')).forEach(function(group){
+  var tabs=[].slice.call(group.querySelectorAll('.tab'));
+  var panels=[].slice.call(group.querySelectorAll('.tab-panel'));
+  tabs.forEach(function(t){t.addEventListener('click',function(){
+   var i=t.getAttribute('data-i');
+   tabs.forEach(function(x){x.classList.remove('on');});
+   panels.forEach(function(x){x.classList.remove('on');});
+   t.classList.add('on');
+   var p=group.querySelector('.tab-panel[data-i="'+i+'"]');if(p)p.classList.add('on');});});
+ });
  var pf=document.getElementById('pdfBtn'),op=[];
  function ex(){op=[];document.querySelectorAll('details').forEach(function(d){if(!d.open){op.push(d);d.open=true;}});}
  function rs(){op.forEach(function(d){d.open=false;});op=[];}
@@ -1198,12 +1295,14 @@ def build(merged, analysis, out, retro=None):
         "本报告基于多模型公开预测与实时倍率做的分析推演，不构成任何投注建议。博彩有风险，请理性娱乐、量力而行，未满法定年龄者请勿参与。"
     # 先渲染各大块；目录只列"实际渲染出来"的块，避免锚点对不上
     sched_html = render_schedule(order)
+    mbets_html = render_model_bets(order)
     plans_html = render_plans(analysis.get("plans") if analysis else None)
     upset_html = render_upset(analysis.get("upset_pick") if analysis else None)
     retro_html = render_retro(retro)
     nav_sections = []
     for present, sid, label in (
         (sched_html, "sched", "今日赛程"),
+        (mbets_html, "modelbets", "各模型下注"),
         (plans_html, "plans", "三档方案"),
         (upset_html, "upset", "博冷雷达"),
         (retro_html, "retro", "上期复盘"),
@@ -1240,6 +1339,7 @@ def build(merged, analysis, out, retro=None):
 {render_nav(order, nav_sections)}
 <main class="wrap">
   {sched_html}
+  {mbets_html}
   {plans_html}
   {upset_html}
   {retro_html}
