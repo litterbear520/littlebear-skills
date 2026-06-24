@@ -19,11 +19,11 @@
           "pick": "让胜"
         }
       ],
-      "stake": 30.0,
+      "stake": 10.0,
       "combinedOdds": 2.3263,
       "status": "win",
-      "payout": 69.79,
-      "profit": 39.79,
+      "payout": 23.26,
+      "profit": 13.26,
       "multiple": 1
     },
     {
@@ -62,7 +62,7 @@
       "martingale": true
     }
   ],
-  "dayProfit": 35.79,
-  "dayStake": 34.0,
+  "dayProfit": 9.26,
+  "dayStake": 14.0,
   "summary": "今天 4 场都看好强队赢，但能放心单买的只有克罗地亚一场，其余三场要么封盘、要么大让球容易『赢得不够』，所以**只锁稳的、让球收着买、重点防一场冷平**。"
 }
