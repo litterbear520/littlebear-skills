@@ -2,9 +2,87 @@
   "date": "2026-06-24",
   "weekday": "周三",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null,
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-24-t1",
+      "tier": "自选·让球串",
+      "type": "2串1×4注",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": "摩洛哥让胜(-2) ＋ 捷克/墨负",
+          "odds": 3.83,
+          "hit": false,
+          "stake": 2.0
+        },
+        {
+          "text": "摩洛哥让胜(-2) ＋ 捷克/墨平",
+          "odds": 7.53,
+          "hit": false,
+          "stake": 2.0
+        },
+        {
+          "text": "摩洛哥让负(-2) ＋ 捷克/墨负",
+          "odds": 4.41,
+          "hit": false,
+          "stake": 2.0
+        },
+        {
+          "text": "摩洛哥让负(-2) ＋ 捷克/墨平",
+          "odds": 8.68,
+          "hit": false,
+          "stake": 2.0
+        }
+      ],
+      "stake": 8.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -8.0,
+      "multiple": 1
+    },
+    {
+      "id": "2026-06-24-t2",
+      "tier": "自选·让球串",
+      "type": "3串1×4注",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": "波黑胜 ＋ 巴西胜 ＋ 南非受让(+1)让胜",
+          "odds": 3.5086,
+          "hit": true,
+          "stake": 4.0,
+          "payout": 14.03
+        },
+        {
+          "text": "波黑胜 ＋ 巴西胜 ＋ 南非受让(+1)让平",
+          "odds": 4.72,
+          "hit": false,
+          "stake": 4.0
+        },
+        {
+          "text": "波黑负 ＋ 巴西胜 ＋ 南非受让(+1)让胜",
+          "odds": 19.49,
+          "hit": false,
+          "stake": 4.0
+        },
+        {
+          "text": "波黑负 ＋ 巴西胜 ＋ 南非受让(+1)让平",
+          "odds": 26.24,
+          "hit": false,
+          "stake": 4.0
+        }
+      ],
+      "stake": 16.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 14.03,
+      "profit": -1.97,
+      "multiple": 2
+    }
+  ],
+  "dayProfit": -9.97,
+  "dayStake": 24.0,
   "summary": "今天 6 场全是小组末轮、出线算计重,本届热门约三成翻车几乎全是冷平,所以重防平、轻让球、别凑大串;没有一场能放心大胜的碾压局。"
 }
