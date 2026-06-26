@@ -36,7 +36,7 @@ UA = f"{SKILL_NAME}-self-update"
 # 覆盖时保留的本机私有文件 / 目录（相对 SKILL_DIR）。这些都被 .gitignore，本不在 tarball 里，
 # 这里再挡一道作为防御（万一上游误把 runs/ 提交进库，也不会删掉本机数据）。
 PRESERVE_TOP = {"runs", ".self_update.json"}
-PRESERVE_REL = {"references/experience.local.md", "references/reviewed_matches.json"}
+PRESERVE_REL = set()
 
 
 def log(msg: str) -> None:

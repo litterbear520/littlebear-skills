@@ -9,8 +9,9 @@
 # 一次性设置（vercel login / link）见 references/site-deploy.md；也可改用官方 deploy-to-vercel 技能部署。
 #
 # 用法：
-#   bash scripts/publish_site.sh --report "$WS/report.html" --analysis "$WS/analysis.json" \
-#        [--date 2026-06-20] [--retro "$PREV/retro.json"] [--deploy]
+#   bash scripts/publish_site.sh --report "$WS/report.html" --date 2026-06-20 \
+#        [--retro "$PREV/settle.json"] [--deploy]
+#   （--retro 指向极简 settle.json：{reviewed_run, user_bought.tickets[]}，仅为收益仪表盘结算）
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"

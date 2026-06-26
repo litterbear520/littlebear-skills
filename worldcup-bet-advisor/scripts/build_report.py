@@ -261,111 +261,92 @@ def rank_compare(m):
             f'<span class="rk{acls}"><i>FIFA</i><b>{ar}</b></span></div>')
 
 
+# ---------- 嘉豪先疯一句（逐字呈现，不做解读） ----------
+FAN_LABELS = ["我更看好", "常规时间方向", "最可能比分", "我敢押的一个具体画面"]
+
+
+def extract_fan_block(md):
+    """从 discussion_md 抠出『## 嘉豪先疯一句』那一段的四个要点，原文照搬。
+    各模型措辞不一（缩进 / 全角冒号 / 加粗），逐行宽松匹配标签即可。"""
+    if not md:
+        return None
+    mt = re.search(r'##\s*嘉豪先疯一句\s*(.*?)(?:\n\s*---|\n\s*##|\Z)', md, re.S)
+    if not mt:
+        return None
+    out = {}
+    for raw in mt.group(1).splitlines():
+        s = raw.strip().lstrip("-*").strip().replace("**", "")
+        for lab in FAN_LABELS:
+            mm = re.match(rf'^{lab}\s*[:：]\s*(.*)$', s)
+            if mm:
+                out[lab] = mm.group(1).strip()
+    return out or None
+
+
+def render_fan_card(model):
+    """单模型嘉豪先疯一句卡片：四行原话照搬。比分行单独高亮（用户最关心的『猜测比分』）。"""
+    fb = extract_fan_block(model.get("discussion_md"))
+    if not fb:
+        return ""
+    rows = ""
+    for lab in FAN_LABELS:
+        if not fb.get(lab):
+            continue
+        cls = " fan-score" if lab == "最可能比分" else (" fan-pic" if lab.startswith("我敢押") else "")
+        rows += (f'<div class="fan-row{cls}"><span class="fan-k">{esc(lab)}</span>'
+                 f'<span class="fan-v">{esc(fb[lab])}</span></div>')
+    if not rows:
+        return ""
+    return (f'<div class="fan"><div class="fan-h">{brand_icon(model.get("brand"))}'
+            f'<span class="brand">{esc(model.get("brand",""))}</span>'
+            f'<span class="mname">{esc(model.get("model_name",""))}</span></div>{rows}</div>')
+
+
+def render_market(m):
+    """市场视角（纯赔率事实，不含我们的判断）：胜平负去水概率 + 比分榜 top。
+    去水＝把赔率换成概率再扣掉庄家抽水，代表市场实际怎么看这场。"""
+    mk = m.get("markets") or {}
+    spf = mk.get("spf") or {}
+    outs = spf.get("outcomes") or []
+    bars, fav = "", None
+    for o in outs:
+        fpb = o.get("fair_prob")
+        if fpb is None:
+            continue
+        if fav is None or fpb > fav[1]:
+            fav = (o.get("label", ""), fpb)
+        bars += (f'<div class="mkt-bar"><div class="mkt-bl"><span>{esc(o.get("label",""))}</span>'
+                 f'<b>{fp(fpb)}</b></div><div class="mkt-track">'
+                 f'<span style="width:{round(fpb*100)}%"></span></div>'
+                 f'<span class="mkt-od">@{o.get("odds","")}</span></div>')
+    top = (mk.get("score") or {}).get("top") or []
+    tops = "".join(f'<span class="mkt-sc">{esc(o["label"])}<i>{fp(o["fair_prob"])}</i></span>'
+                   for o in top[:5] if o.get("fair_prob") is not None)
+    if not bars and not tops:
+        return ""
+    judge = f'市场最看好 <b>{esc(fav[0])}</b>（去水 {fp(fav[1])}）' if fav else ""
+    bars_block = (f'<div class="mkt-bars"><div class="mkt-l">胜平负 · 去水概率</div>{bars}</div>'
+                  if bars else "")
+    tops_block = (f'<div class="mkt-tops"><div class="mkt-l">比分榜 · 市场最看好</div>'
+                  f'<div class="mkt-scs">{tops}</div></div>' if tops else "")
+    judge_block = f'<p class="mkt-judge">{judge}</p>' if judge else ""
+    return (f'<div class="market"><div class="market-h">市场怎么看</div>'
+            f'{judge_block}{bars_block}{tops_block}</div>')
+
+
 def render_match(idx, m, a, value_labels):
+    """单场：市场视角（赔率事实）+ 各模型嘉豪先疯一句原文 + 折叠的全部玩法赔率。不含任何我们的分析判断。"""
     ta, tb = esc(m["team_a"]), esc(m["team_b"])
     lot = esc(m.get("lotteryid", ""))
-    ko = esc(fmt_kickoff(m.get("kickoff_at")))  # 北京时间
-    head = esc(a.get("headline", "")) if a else ""
-    cons = esc(a.get("consensus", "")) if a else ""
+    ko = esc(fmt_kickoff(m.get("kickoff_at")))
 
-    # 选中 agent 的观点列
-    views = ""
-    sel_brands = []
-    for v in (a.get("agent_views", []) if a else []):
-        sel_brands.append(v.get("brand"))
-        pts = ""
-        for p in v.get("points", []):
-            p = str(p)
-            # "最易打脸/最大风险…"这类自我反驳子句常嵌在论点中段；只弱化高亮该子句，前半段正点照常
-            mk = next((k for k in ("最易打脸", "最大风险", "最大变数") if k in p), None)
-            if mk:
-                i = p.find(mk)
-                before = p[:i].rstrip(" ;；,，、")
-                tag = f'<span class="risk-tag">{esc(p[i:])}</span>'
-                pts += f"<li>{esc(before)}{tag}</li>" if before else f'<li class="solo-risk">{tag}</li>'
-            else:
-                pts += f"<li>{esc(p)}</li>"
-        views += f'''<div class="view">
-          <div class="view-h">{brand_icon(v.get("brand"))}<span class="brand">{esc(v.get("brand"))}</span>
-            <span class="mname">{esc(v.get("model_name",""))}</span></div>
-          <div class="stance">{esc(v.get("stance",""))}</div>
-          <ul>{pts}</ul></div>'''
-    views_block = f'<div class="views">{views}</div>' if views else ""
+    # 各模型嘉豪先疯一句（原文照搬）
+    fans = "".join(render_fan_card(mod) for mod in m.get("models", []))
+    fans_block = (f'<div class="fans"><div class="fans-l">⬡ 嘉豪先疯一句 · 各模型原话</div>'
+                  f'<div class="fans-grid">{fans}</div></div>') if fans else ""
 
-    # 其他模型一句话脚注
-    sel_set = set(sel_brands)
-    foot = ""
-    for mod in m.get("models", []):
-        if mod["brand"] in sel_set or not mod.get("lean"):
-            continue
-        bet = mod.get("bet_direction") or "暂无投注"
-        foot += (f'<span class="foot-chip">{brand_icon(mod["brand"])}<b>{esc(mod["brand"])}</b> '
-                 f'{esc(mod["lean"])} <i>({esc(bet)})</i></span>')
-    foot_block = f'<div class="foot"><span class="foot-l">其他模型</span>{foot}</div>' if foot else ""
-
-    # 最可能比分（双口径并排）：模型看好(陶土橘) vs 市场去水 top(中性+概率)，
-    # 让用户一眼看出模型是不是在赌大胜——市场口径来自 merge.py 已算好的 score.top。
-    model_scores = a.get("most_likely_scores", []) if a else []
-    mls = "".join(f'<span class="ml">{esc(s)}</span>' for s in model_scores)
-    mkt_top = (((m.get("markets") or {}).get("score") or {}).get("top") or [])
-    mkt = "".join(f'<span class="ml mkt">{esc(o["label"])}<i>{fp(o["fair_prob"])}</i></span>'
-                  for o in mkt_top[:3] if o.get("fair_prob") is not None)
-    mls_block = ""
-    if mls or mkt:
-        model_grp = f'<span class="ml-l">模型看好</span>{mls}' if mls else ""
-        mkt_grp = f'<span class="ml-l ml-l2">盘口测算</span>{mkt}' if mkt else ""
-        mls_block = (f'<div class="ml-row"><span class="ml-cap">最可能比分</span>'
-                     f'{model_grp}{mkt_grp}</div>')
-    vps = ""
-    for vp in (a.get("value_points", []) if a else []):
-        mp = f'<span class="vp-mk">盘口只算 {fp(vp["market_prob"])}</span>' if vp.get("market_prob") is not None else ""
-        vps += (f'<div class="vp"><div class="vp-h"><span class="vp-play">{esc(vp.get("play"))}</span>'
-                f'<span class="vp-odds">@{vp.get("odds","")}</span>{mp}</div>'
-                f'<div class="vp-why">{esc(vp.get("why",""))}</div></div>')
-    vps_block = f'<div class="vps"><div class="vps-l">划算的玩法</div>{vps}</div>' if vps else ""
-    # 陷阱点/避雷：市场热但讨论里有明确风险的玩法（别当稳胆）
-    tps = ""
-    for tp in (a.get("trap_points", []) if a else []):
-        mp = f'<span class="vp-mk">盘口 {fp(tp["market_prob"])}</span>' if tp.get("market_prob") is not None else ""
-        od = f'<span class="tp-odds">@{tp.get("odds")}</span>' if tp.get("odds") else ""
-        tps += (f'<div class="tp"><div class="vp-h"><span class="tp-play">{esc(tp.get("play"))}</span>'
-                f'{od}{mp}</div>'
-                f'<div class="vp-why">{esc(tp.get("why",""))}</div></div>')
-    tps_block = f'<div class="traps"><div class="traps-l">要避开的坑</div>{tps}</div>' if tps else ""
-
-    # 防一手 · 平局：对"输赢明显/大热"或"势均力敌易平"的场，单独提醒平局风险（draw_guard）
-    dg = (a.get("draw_guard") if a else None) or None
-    dg_block = ""
-    if dg and dg.get("level"):
-        lv = dg.get("level", "")
-        lv_cls = "high" if "高" in lv else "mid"
-        dp = dg.get("draw_prob")
-        dp_txt = (f'<span class="dg-prob">平局概率约 {round(dp * 100)}%</span>'
-                  if isinstance(dp, (int, float)) else "")
-        sigs = "".join(f"<li>{esc(s)}</li>" for s in dg.get("signals", []))
-        sigs_html = f'<ul class="dg-sigs">{sigs}</ul>' if sigs else ""
-        hedge = (f'<div class="dg-hedge"><span class="dg-hl">防一手</span>{esc(dg.get("hedge", ""))}</div>'
-                 if dg.get("hedge") else "")
-        dg_block = (f'<div class="dg dg-{lv_cls}">'
-                    f'<div class="dg-h"><span class="dg-t">防一手 · 平局风险（{esc(lv)}）</span>{dp_txt}</div>'
-                    f'{sigs_html}{hedge}</div>')
-
-    # 本届走势 · 真实战况：联网搜到的该队本届此前实际表现（不只比分），喂判断也摆给用户看
-    forms = (a.get("form") if a else None) or []
-    form_items = ""
-    for fm in forms:
-        if not isinstance(fm, dict) or not (fm.get("team") or fm.get("read")):
-            continue
-        last = f'<span class="fm-last">{esc(fm["last"])}</span>' if fm.get("last") else ""
-        src = f'<span class="fm-src">{esc(fm["src"])}</span>' if fm.get("src") else ""
-        form_items += (f'<div class="fm"><div class="fm-top"><span class="fm-team">{esc(fm.get("team",""))}</span>'
-                       f'{last}{src}</div><div class="fm-read">{esc(fm.get("read",""))}</div></div>')
-    form_block = (f'<div class="forms"><div class="forms-l">本届走势 · 真实战况</div>{form_items}</div>'
-                  if form_items else "")
-
-    # 玩法倍率：胜平负常驻为"重点玩法"，其余折叠（折叠副标题按实际包含的玩法动态生成）
-    key_html = ""
-    rest_html = ""
+    # 玩法倍率：胜平负常驻为"重点玩法"，其余折叠
+    key_html, rest_html = "", ""
     if m.get("odds_matched"):
         mk = m["markets"]
         sg = m.get("singles", {})
@@ -376,12 +357,12 @@ def render_match(idx, m, a, value_labels):
                               value_labels, label_key="sel") if rq.get("outcomes") else "")
         goals_html = odds_table("总进球", mk.get("goals", {}).get("outcomes", []), sg.get("goals"), value_labels)
         htft_html = odds_table("半全场", mk.get("htft", {}).get("outcomes", []), sg.get("htft"), value_labels)
-        rest_items = []  # (副标题名, html)
+        rest_items = []
         if spf.get("outcomes"):
             key_html = odds_table("胜平负", spf["outcomes"], sg.get("spf"), value_labels)
             if score_html:
                 rest_items.append(("比分", score_html))
-        else:  # 无胜平负时把比分提为重点
+        else:
             key_html = score_html
         for name, h in (("让球", rq_html), ("总进球", goals_html), ("半全场", htft_html)):
             if h:
@@ -394,15 +375,7 @@ def render_match(idx, m, a, value_labels):
                          f'<div class="markets">{inner}</div></details>')
     else:
         key_html = f'<div class="no-odds">⚠ {esc(m.get("odds_note","暂无倍率数据"))}</div>'
-
     key_block = f'<div class="key-mkt">{key_html}</div>' if key_html else ""
-
-    disc_block = ""
-    if views_block or foot_block:
-        names = " · ".join(esc(b) for b in sel_brands) if sel_brands else "模型"
-        disc_block = (f'<details class="fold"><summary><span class="fold-t">展开模型讨论对比</span>'
-                      f'<span class="fold-s">{names}</span></summary>'
-                      f'<div class="disc-body">{views_block}{foot_block}</div></details>')
 
     delay = min(idx * 0.05, 0.3)
     return f'''<section class="match reveal" id="m{idx}" style="animation-delay:{delay:.2f}s">
@@ -412,224 +385,52 @@ def render_match(idx, m, a, value_labels):
         <div class="m-meta"><span class="ko">{ko}</span></div>
       </div>
       {rank_compare(m)}
-      {f'<p class="headline">{head}</p>' if head else ''}
-      {f'<p class="consensus">{cons}</p>' if cons else ''}
-      {form_block}
-      {mls_block}
-      {vps_block}
-      {tps_block}
-      {dg_block}
+      {render_market(m)}
+      {fans_block}
       {key_block}
       {rest_html}
-      {disc_block}
     </section>'''
 
 
-# ---------- 方案卡 ----------
-def leg_line(l, show_conf=True):
-    mt = esc(l.get("match", l.get("match_id", "")))
-    conf = (f'<span class="leg-conf">{conf_dots(l.get("confidence"))}</span>'
-            if show_conf and l.get("confidence") is not None else "")
-    reason = f'<div class="leg-r">{esc(l.get("reason"))}</div>' if l.get("reason") else ""
-    return (f'<div class="leg">'
-            f'<div class="leg-top"><span class="leg-p">{esc(l.get("play"))}</span>'
-            f'<span class="leg-o">@{l.get("odds","")}</span></div>'
-            f'<div class="leg-meta"><span class="leg-m">{mt}</span>{conf}</div>'
-            f'{reason}</div>')
-
-
-def _plan_heading(title, label):
-    # 策略句去掉 "档位名 · " 前缀，避免与标签里的档位名重复
-    for sep in (" · ", " ·", "· ", "·", " - ", " | "):
-        pre = label + sep
-        if title.startswith(pre):
-            return title[len(pre):]
-    return title
-
-
-def _legs_grid(blocks):
-    # blocks: [(group_header|None, combo|None, [legs], parlay_note|None, show_conf), ...]
-    # 串关腿不显示单腿信心点（整串才是风险单位）；单关/底仓显示。
-    html = ""
-    for gh, combo, legs, pnote, show_conf in blocks:
-        if gh is not None:
-            co = f'<span class="combo">合计 @{combo}</span>' if combo else ""
-            html += f'<div class="tp-gh">{esc(gh)}{co}</div>'
-        html += "".join(leg_line(l, show_conf) for l in legs)
-        if pnote:
-            html += f'<div class="leg-r tp-pnote">{esc(pnote)}</div>'
-    return f'<div class="tp-legs">{html}</div>'
-
-
-def render_plans(plans):
-    if not plans:
-        return ""
-    # 三档收成一组 Tabs：一次聚焦一档，选中档独占全宽面板（PDF 导出时三档全展开）
-    tiers = []  # (num, name, hint, accent, title, sub, body_html, note)
-
-    st = plans.get("steady")
-    if st:
-        body = _legs_grid([(None, None, st.get("legs", []), None, True)])
-        tiers.append(("01", "稳健", "只认共识腿", "calm",
-                      st.get("title", "稳健单关"), st.get("sub", "高把握、求命中率"),
-                      body, st.get("note")))
-
-    ba = plans.get("balanced")
-    if ba:
-        blocks = []
-        if ba.get("singles"):
-            blocks.append(("核心单关", None, ba["singles"], None, True))
-        pl = ba.get("parlay")
-        if pl and pl.get("legs"):
-            blocks.append(("小串", parlay_odds(pl["legs"]), pl["legs"], pl.get("note"), False))
-        tiers.append(("02", "平衡", "底仓 + 小串", "mid",
-                      ba.get("title", "单关 + 小串"), ba.get("sub", "命中与回报兼顾"),
-                      _legs_grid(blocks), ba.get("note")))
-
-    ag = plans.get("aggressive")
-    if ag:
-        blocks = []
-        for i, pl in enumerate(ag.get("parlays", []), 1):
-            blocks.append((f"串关 {i}", parlay_odds(pl.get("legs", [])), pl.get("legs", []), pl.get("note"), False))
-        if ag.get("singles"):
-            blocks.append(("博冷单关", None, ag["singles"], None, True))
-        tiers.append(("03", "激进", "顺风串 + 博冷", "bold",
-                      ag.get("title", "串关博高赔"), ag.get("sub", "博高回报、容忍低命中"),
-                      _legs_grid(blocks), ag.get("note")))
-
-    if not tiers:
-        return ""
-
-    heads, panels = "", ""
-    for idx, (num, name, hint, accent, title, sub, body, note) in enumerate(tiers):
-        on = " on" if idx == 0 else ""
-        heads += (f'<button class="tab {accent}{on}" type="button" role="tab" data-i="{idx}">'
-                  f'<span class="tb">{num}</span>'
-                  f'<span class="tt"><span class="tn">{esc(name)}</span>'
-                  f'<span class="td">{esc(hint)}</span></span></button>')
-        note_html = f'<p class="tp-note">{esc(note)}</p>' if note else ""
-        panels += (f'<div class="tab-panel {accent}{on}" role="tabpanel" data-i="{idx}">'
-                   f'<div class="tp-tier" aria-hidden="true"><span class="tb">{num}</span>{esc(name)}</div>'
-                   f'<h3 class="tp-title">{esc(_plan_heading(title, name))}</h3>'
-                   f'<p class="tp-sub">{esc(sub)}</p>'
-                   f'{body}{note_html}</div>')
-
-    return (f'<div class="plans-tabs reveal" id="plans"><div class="tabs">'
-            f'<div class="tabs-head" role="tablist">{heads}</div>{panels}</div></div>')
-
-
-# ---------- 最有可能的爆冷（博冷雷达，放三档方案下面、复盘上面） ----------
-def _upset_card(p, kind):
-    """kind: 'primary' 首选 / 'alt' 备选。p 缺 play 则不渲染。"""
-    if not isinstance(p, dict) or not p.get("play"):
-        return ""
-    rank = "首选" if kind == "primary" else "备选"
-    match = f'<span class="up-match">{esc(p["match"])}</span>' if p.get("match") else ""
-    typ = f'<span class="up-type">{esc(p["type"])}</span>' if p.get("type") else ""
-    conf = (f'<span class="up-conf">{conf_dots(p.get("confidence"))}</span>'
-            if p.get("confidence") is not None else "")
-    odds = f'<span class="up-odds">@{p.get("odds")}</span>' if p.get("odds") not in (None, "") else ""
-    why = f'<div class="up-why">{esc(p.get("why",""))}</div>' if p.get("why") else ""
-    basis = (f'<div class="up-basis"><span class="up-bl">依据</span>{esc(p["history_basis"])}</div>'
-             if p.get("history_basis") else "")
-    return (f'<div class="up-pick up-{kind}">'
-            f'<div class="up-pk-top"><span class="up-rank">{rank}</span>{match}{typ}{conf}</div>'
-            f'<div class="up-play-row"><span class="up-play">{esc(p.get("play"))}</span>{odds}</div>'
-            f'{why}{basis}</div>')
-
-
-def render_upset(up):
-    """爆冷雷达：综合本届爆冷史 + 嘉豪冷剧本 + form，给今日最可能爆冷的首选 + 备选。"""
-    if not isinstance(up, dict):
-        return ""
-    primary_html = _upset_card(up.get("primary"), "primary")
-    if not primary_html:   # 没有首选就不渲染整块（fail-open，没冷点就别硬凑）
-        return ""
-    alt_html = _upset_card(up.get("alt"), "alt")
-    base = esc(up.get("tournament_upsets", "") or "")
-    base_html = f'<p class="up-base">{base}</p>' if base else ""
-    note = esc(up.get("note", "") or "")
-    note_html = f'<p class="up-note">{note}</p>' if note else ""
-    return (f'<section class="upset reveal" id="upset">'
-            f'<div class="up-head"><span class="up-k">⚡ 博冷雷达</span>'
-            f'<h2 class="up-title">最有可能的爆冷</h2></div>'
-            f'{base_html}'
-            f'<div class="up-picks">{primary_html}{alt_html}</div>'
-            f'{note_html}'
-            f'<div class="up-disc">爆冷天生低命中，押冷靠的是赔率价值——只配小注、别当主力，宁可空也别梭。</div>'
-            f'</section>')
-
-
-# ---------- 复盘模块（上期回顾，放三档方案下面） ----------
-def render_retro(retro):
-    if not retro:
-        return ""
-    rdate = esc(retro.get("reviewed_run", ""))
-    ub = retro.get("user_bought") or {}
-    ub_txt = ""
-    if ub:
-        head = esc(ub.get("tier") or ub.get("note") or "—")
-        legs = "、".join(esc(x) for x in ub.get("legs", []))
-        ub_txt = f"你上次买了：<b>{head}</b>" + (f"（{legs}）" if legs else "")
-    ures = esc(retro.get("user_result", ""))
-    sum_txt = ub_txt + (f" · {ures}" if ures else "")
-    sum_html = f'<div class="retro-sum">{sum_txt}</div>' if sum_txt.strip() else ""
-
-    rows = ""
-    for m in retro.get("matches", []):
-        chips = ""
-        for g in m.get("graded", []):
-            if g.get("hit"):
-                cls, mk = "hit", "✓"
-            elif g.get("warned_correctly"):
-                cls, mk = "warn", "⊘"
-            else:
-                cls, mk = "miss", "✗"
-            chips += f'<span class="rg {cls}">{esc(g.get("play", ""))} {mk}</span>'
-        chips_html = f'<div class="rm-g">{chips}</div>' if chips else ""
-        take = esc(m.get("model_take", ""))
-        take_html = f'<div class="rm-take">{take}</div>' if take else ""
-        rows += (f'<div class="rm"><div class="rm-h"><span class="rm-t">{esc(m.get("teams", ""))}</span>'
-                 f'<span class="rm-s">{esc(m.get("final_score", ""))} <i>{esc(m.get("result_side", ""))}</i></span></div>'
-                 f"{chips_html}{take_html}</div>")
-    rows_html = f'<div class="rms">{rows}</div>' if rows else ""
-
-    pr = retro.get("plans_review", {}) or {}
-    prow = ""
-    for k, label in (("steady", "稳健"), ("balanced", "平衡"), ("aggressive", "激进")):
-        p = pr.get(k)
-        if not p:
+# ---------- 各模型猜测比分一览（tab 切换比赛） ----------
+def render_model_scores(order):
+    """嘉豪 · 各模型猜测比分一览：每场把各模型『最可能比分』原话并排，附市场比分 top。
+    比分文本一律照搬模型原话（含队名 / 多选 / 平局），不替用户解读朝向。"""
+    panels, heads, n = "", "", 0
+    for m in order:
+        rows = ""
+        for mod in m.get("models", []):
+            # 优先用 agent 归一到「主队-客队」朝向的纯比分；缺失才退回原话
+            sc = mod.get("pred_score_norm")
+            if not sc:
+                fb = extract_fan_block(mod.get("discussion_md"))
+                sc = (fb or {}).get("最可能比分")
+            if not sc:
+                continue
+            rows += (f'<div class="ms-row"><span class="ms-m">{brand_icon(mod.get("brand"))}'
+                     f'<i>{esc(mod.get("brand",""))}</i></span>'
+                     f'<span class="ms-sc">{esc(sc)}</span></div>')
+        if not rows:
             continue
-        n = ""
-        if p.get("hit") is not None and p.get("legs") is not None:
-            n = f'<span class="rp-n">{p["hit"]}/{p["legs"]}</span>'
-        prow += f'<div class="rp"><span class="rp-k">{label}</span>{n}<span class="rp-v">{esc(p.get("verdict", ""))}</span></div>'
-    plans_html = f'<div class="rp-box"><div class="rsub">三档命中</div>{prow}</div>' if prow else ""
-
-    cal = ""
-    for c in retro.get("model_calibration", []):
-        cal += (f'<div class="rc">{brand_icon(c.get("brand"))}<b>{esc(c.get("brand"))}</b> '
-                f'<span class="rc-n">{esc(c.get("direction_right", ""))}</span>'
-                f'<span class="rc-note">{esc(c.get("note", ""))}</span></div>')
-    cal_html = f'<div class="rc-box"><div class="rsub">模型校准（这几场谁更靠谱）</div>{cal}</div>' if cal else ""
-
-    bigv = esc(retro.get("big_direction_verdict", ""))
-    big_html = f'<div class="rl-box"><div class="rsub">大方向</div><p class="rl-p">{bigv}</p></div>' if bigv else ""
-    sig = "".join(f"<li>{esc(x)}</li>" for x in retro.get("jiahao_signal_lessons", []))
-    sig_html = f'<div class="rl-box"><div class="rsub">嘉豪正文里被验证可信的信号</div><ul class="rl">{sig}</ul></div>' if sig else ""
-    adj = "".join(f"<li>{esc(x)}</li>" for x in retro.get("next_adjustments", []))
-    adj_html = f'<div class="rl-box adj"><div class="rsub">本期据此调整</div><ul class="rl">{adj}</ul></div>' if adj else ""
-
-    synced = retro.get("historical_synced")
-    sync_html = (f'<div class="retro-sync">本次另新增分析 {esc(str(synced))} 场历史，规律已沉淀进经验。</div>'
-                 if synced else "")
-
-    body = f"{sum_html}{rows_html}{plans_html}{cal_html}{big_html}{sig_html}{adj_html}{sync_html}"
-    return (f'<details class="retro reveal" id="retro" open><summary>'
-            f'<span class="retro-k">复盘</span>'
-            f'<span class="retro-t">上期复盘回顾 · {rdate}</span>'
-            f'<span class="retro-hint">点按折叠/展开</span></summary>'
-            f'<div class="retro-body">{body}</div></details>')
+        top = ((m.get("markets") or {}).get("score") or {}).get("top") or []
+        mkt = "".join(f'<span class="ms-mk">{esc(o["label"])}<i>{fp(o["fair_prob"])}</i></span>'
+                      for o in top[:3] if o.get("fair_prob") is not None)
+        mkt_row = (f'<div class="ms-row ms-mkt"><span class="ms-m">市场比分top</span>'
+                   f'<span class="ms-scs">{mkt}</span></div>') if mkt else ""
+        ta, tb = esc(m["team_a"]), esc(m["team_b"])
+        on = " on" if n == 0 else ""
+        heads += (f'<button class="tab ms-tab{on}" type="button" role="tab" data-i="{n}">'
+                  f'<span class="tt"><span class="tn">{ta}<i>vs</i>{tb}</span></span></button>')
+        panels += (f'<div class="tab-panel ms-panel{on}" role="tabpanel" data-i="{n}">'
+                   f'<div class="ms-grid">{rows}{mkt_row}</div></div>')
+        n += 1
+    if not panels:
+        return ""
+    return (f'<section class="modelscores reveal" id="modelscores">'
+            f'<div class="mb-head"><span class="mb-k">⬡ 嘉豪预测</span>'
+            f'<h2 class="mb-title">各模型猜测比分一览</h2></div>'
+            f'<p class="mb-intro">每场各模型『最可能比分』按主客朝向归一后的比分（主队-客队，多个比分用斜杠分隔）——点上方标签切换比赛，末行是市场比分榜最看好的几个。</p>'
+            f'<div class="tabs ms-tabs"><div class="tabs-head" role="tablist">{heads}</div>{panels}</div></section>')
 
 
 def render_nav(order, sections):
@@ -923,6 +724,53 @@ a{color:inherit}
 .mb-ic .bic{width:18px;height:18px;flex:none}
 .mb-empty{color:var(--muted);font-size:18px;line-height:1}
 @media(max-width:640px){.mb-grid{grid-template-columns:1fr}.mb-tab{min-width:0;flex:1 1 42%}}
+/* 各模型猜测比分一览 */
+.modelscores{margin-bottom:50px}
+.ms-grid{display:flex;flex-direction:column;gap:8px}
+.ms-row{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:center;gap:14px;padding:11px 14px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
+.ms-m{display:inline-flex;align-items:center;gap:8px;font-weight:700;color:var(--ink2);font-size:13.5px}
+.ms-m i{font-style:normal}
+.ms-m .bic{width:18px;height:18px;flex:none}
+.ms-sc{font-family:"Fraunces",Georgia,serif;font-size:17px;font-weight:600;color:var(--clay-d);font-variant-numeric:tabular-nums;min-width:0;letter-spacing:.01em}
+.ms-mkt{background:var(--paper2);border-style:dashed}
+.ms-mkt .ms-m{color:var(--muted)}
+.ms-scs{display:flex;flex-wrap:wrap;gap:8px}
+.ms-mk{font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.ms-mk i{font-style:normal;color:var(--muted);margin-left:6px}
+@media(max-width:640px){.ms-row{grid-template-columns:120px 1fr}}
+/* 市场怎么看（单场内） */
+.market{margin:2px 0 18px;padding:15px 17px;border:1px solid var(--line);border-radius:14px;background:var(--panel2)}
+.market-h{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+.mkt-judge{font-size:14px;color:var(--ink2);margin-bottom:12px}
+.mkt-judge b{color:var(--clay-d);font-weight:700}
+.mkt-l{font-size:12px;color:var(--muted);margin-bottom:8px}
+.mkt-bars{margin-bottom:13px}
+.mkt-bar{display:grid;grid-template-columns:1fr 88px auto;align-items:center;gap:11px;margin-bottom:7px}
+.mkt-bl{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);order:1}
+.mkt-bl b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:700}
+.mkt-track{order:2;grid-column:1/3;height:7px;border-radius:6px;background:var(--paper2);overflow:hidden;border:1px solid var(--line)}
+.mkt-track span{display:block;height:100%;background:linear-gradient(90deg,var(--clay),var(--clay-d))}
+.mkt-od{order:3;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mkt-tops{border-top:1px solid var(--line);padding-top:11px}
+.mkt-scs{display:flex;flex-wrap:wrap;gap:8px}
+.mkt-sc{font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 10px;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.mkt-sc i{font-style:normal;color:var(--muted);margin-left:7px}
+/* 嘉豪先疯一句 · 各模型原话 */
+.fans{margin:4px 0 6px}
+.fans-l{font-size:11.5px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:12px}
+.fans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.fan{border:1px solid var(--line);border-radius:14px;background:var(--panel2);padding:14px 16px}
+.fan-h{display:flex;align-items:center;gap:9px;margin-bottom:11px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.fan-h .bic{width:20px;height:20px;flex:none}
+.fan-h .brand{font-weight:700;color:var(--ink2);font-size:14px}
+.fan-h .mname{font-size:11px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+.fan-row{display:grid;grid-template-columns:78px minmax(0,1fr);gap:11px;padding:5px 0;font-size:13.5px;line-height:1.6}
+.fan-k{color:var(--muted);font-size:12px;font-weight:600}
+.fan-v{color:var(--ink);min-width:0}
+.fan-score .fan-v{font-family:"Fraunces",Georgia,serif;font-weight:600;color:var(--clay-d);font-size:15px}
+.fan-pic{align-items:start}
+.fan-pic .fan-v{color:var(--ink2);font-size:12.5px;line-height:1.7}
+@media(max-width:640px){.fans-grid{grid-template-columns:1fr}.fan-row{grid-template-columns:64px 1fr}}
 .plans-tabs{margin-bottom:50px}
 .tabs{--pa:var(--clay);--pa-d:var(--clay-d);--pa-t:var(--clay-t);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
 .tabs-head{display:flex;background:var(--panel2);border-bottom:1px solid var(--line)}
@@ -1284,52 +1132,41 @@ MAIN_JS = """
 """
 
 
-def build(merged, analysis, out, retro=None):
+def build(merged, analysis, out, retro=None, date_arg=None):
     meta = analysis.get("meta", {}) if analysis else {}
-    amatches = {a["match_id"]: a for a in (analysis.get("matches", []) if analysis else [])}
     order = sorted(merged.values(), key=lambda m: m.get("kickoff_at") or "")
-    sections = ""
-    for i, m in enumerate(order, 1):
-        a = amatches.get(m["match_id"])
-        vlabels = set()
-        if a:
-            for vp in a.get("value_points", []):
-                if vp.get("play"):
-                    vlabels.add(vp["play"])
-                if vp.get("label"):
-                    vlabels.add(vp["label"])
-        sections += render_match(i, m, a, vlabels)
+    # 纯汇总：每场只渲染市场赔率 + 各模型嘉豪先疯一句原文，无价值标注
+    sections = "".join(render_match(i, m, None, set()) for i, m in enumerate(order, 1))
 
-    sel = meta.get("selected_agents", [])
-    agent_tags = "".join(f'<span class="atag">{brand_icon(b)}{esc(b)}</span>' for b in sel) or "—"
+    # 日期：优先 --date / meta.date，否则从最早开赛时间推北京日期（不再依赖 analysis）
+    date = date_arg or meta.get("date") or (fmt_kickoff(order[0].get("kickoff_at"), "%Y-%m-%d") if order else "")
+    # 采纳模型：取实际出现且有嘉豪先疯一句的品牌（不再靠人工 selected_agents）
+    seen, brands = set(), []
+    for m in order:
+        for mod in m.get("models", []):
+            b = mod.get("brand")
+            if b and b not in seen and extract_fan_block(mod.get("discussion_md")):
+                seen.add(b)
+                brands.append(b)
+    agent_tags = "".join(f'<span class="atag">{brand_icon(b)}{esc(b)}</span>' for b in brands) or "—"
     disclaimer = (analysis.get("disclaimer") if analysis else None) or \
-        "本报告基于多模型公开预测与实时倍率做的分析推演，不构成任何投注建议。博彩有风险，请理性娱乐、量力而行，未满法定年龄者请勿参与。"
+        "本报告只做汇总呈现：原样搬运各模型在嘉豪平台的公开预测，叠加竞彩实时倍率，不含本站的任何分析、判断或投注建议。博彩有风险，请理性娱乐、量力而行，未满法定年龄者请勿参与。"
     # 先渲染各大块；目录只列"实际渲染出来"的块，避免锚点对不上
     sched_html = render_schedule(order)
     mbets_html = render_model_bets(order)
-    plans_html = render_plans(analysis.get("plans") if analysis else None)
-    upset_html = render_upset(analysis.get("upset_pick") if analysis else None)
-    retro_html = render_retro(retro)
+    mscores_html = render_model_scores(order)
     nav_sections = []
     for present, sid, label in (
         (sched_html, "sched", "今日赛程"),
         (mbets_html, "modelbets", "各模型下注"),
-        (plans_html, "plans", "三档方案"),
-        (upset_html, "upset", "博冷雷达"),
-        (retro_html, "retro", "上期复盘"),
+        (mscores_html, "modelscores", "各模型比分"),
     ):
         if present:
             nav_sections.append((sid, label))
 
-    # 开头「今日要点」：把定调拆成几条大白话短句（meta.summary_points），清爽列出、不堆成一坨。
-    pts = [p for p in (meta.get("summary_points") or []) if str(p).strip()]
-    lede_html = ('<ul class="lede">' +
-                 "".join(f'<li>{emph(p)}</li>' for p in pts) +
-                 '</ul>') if pts else ""
-
     doc = f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>世界杯玩法分析 · {esc(meta.get("date",""))}</title>
+<title>嘉豪世界杯预测汇总 · {esc(date)}</title>
 <script>{INIT_JS}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1337,12 +1174,11 @@ def build(merged, analysis, out, retro=None):
 <style>{CSS}</style></head><body>
 <div class="bg"></div>
 <header class="hero"><div class="wrap">
-  <div class="kicker">World Cup 2026 · 玩法分析</div>
-  <h1>{esc(meta.get("date",""))} 竞彩玩法建议</h1>
-  <p class="sub">{emph(meta.get("risk_note","") or "以 Claude / DeepSeek 等模型讨论为主，结合当天全玩法实时倍率做去水校验，给出稳健 / 平衡 / 激进三档玩法方案。")}</p>
-  {lede_html}
+  <div class="kicker">World Cup 2026 · 嘉豪预测汇总</div>
+  <h1>{esc(date)} 各模型下注与猜测比分</h1>
+  <p class="sub">原样汇总各模型在嘉豪平台的下注与「最可能比分」，附每场的实时倍率与市场去水概率——只做呈现，不含本站判断。</p>
   <div class="meta-row">
-    <span class="mk-l">采纳模型 <span class="agent-tags">{agent_tags}</span></span>
+    <span class="mk-l">覆盖模型 <span class="agent-tags">{agent_tags}</span></span>
     <span class="mk-l">覆盖比赛 <b>{len(order)} 场</b></span>
     <span class="mk-l">生成时间 <b>{esc(meta.get("generated_at",""))}</b></span>
   </div>
@@ -1351,13 +1187,11 @@ def build(merged, analysis, out, retro=None):
 <main class="wrap">
   {sched_html}
   {mbets_html}
-  {plans_html}
-  {upset_html}
-  {retro_html}
+  {mscores_html}
   {sections}
   <footer>
     <div class="disc">{esc(disclaimer)}</div>
-    数据来源：worldcup.lyihub.com（模型预测）· 竞彩实时倍率。"真实概率"＝把赔率换算成概率、再扣掉庄家抽水后的结果，代表这个选项实际大概多大可能发生，仅供参考。
+    数据来源：worldcup.lyihub.com（模型预测）· 竞彩实时倍率。"去水概率"＝把赔率换算成概率、再扣掉庄家抽水后的结果，代表市场对这个选项实际大概多大可能发生的判断，仅供参考。
   </footer>
 </main>
 <script>{MAIN_JS}</script>
@@ -1369,14 +1203,15 @@ def build(merged, analysis, out, retro=None):
 def main():
     ap = argparse.ArgumentParser(description="渲染世界杯玩法分析 HTML 报告")
     ap.add_argument("--merged", required=True)
-    ap.add_argument("--analysis", help="模型产出的判断与三档方案 JSON（可选，缺则仅渲染数据）")
-    ap.add_argument("--retro", help="上期复盘 retro.json（可选，渲染进三档方案下方的'上期复盘回顾'模块）")
+    ap.add_argument("--date", help="报告日期 YYYY-MM-DD（推荐传；缺则从最早开赛时间推北京日期）")
+    ap.add_argument("--analysis", help="（已弃用）旧版判断 JSON；现仅可能取 meta.date，纯汇总模式无需传")
+    ap.add_argument("--retro", help="（已弃用）旧版复盘 JSON；汇总模式不再渲染")
     ap.add_argument("--out", default="report.html")
     args = ap.parse_args()
     merged = json.loads(Path(args.merged).read_text(encoding="utf-8"))
     analysis = json.loads(Path(args.analysis).read_text(encoding="utf-8")) if args.analysis else None
     retro = json.loads(Path(args.retro).read_text(encoding="utf-8")) if args.retro else None
-    build(merged, analysis, args.out, retro)
+    build(merged, analysis, args.out, retro, date_arg=args.date)
 
 
 if __name__ == "__main__":

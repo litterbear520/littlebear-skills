@@ -3,13 +3,9 @@
 """
 抓取 worldcup.lyihub.com 的"嘉豪世界杯预测"数据。
 
-四个子命令：
+两个子命令：
   index   —— 抓 data/index.json，输出"未开赛 + 有预测"的近几场，供用户勾选。
   matches —— 抓 data/matches/{id}.json，抽取每个 agent 的 bet + 讨论正文。
-  history —— 列出选中场两队"本届此前已踢"的场次（对手/比分/当时各模型一句话），
-             供赛前联网搜真实战况（见 playbook 一·补）+ 复盘 Track1 用。
-  upsets  —— 扫本届已踢完场，统计"模型共识大热门没赢"的爆冷基准率（冷平/弱队胜），
-             喂"博冷雷达"（见 playbook 二·补2）：今日最可能爆冷买法的客观底数。
 
 数据是纯静态 JSON，默认用 urllib 直接拉；若被网络环境阻断，可用 --raw-dir 读取
 事先用 CDP/浏览器抓好的同名 JSON 文件（{id}.json / index.json）。
@@ -194,130 +190,6 @@ def cmd_matches(args):
     print(f"[matches] {len(result)} 场 -> {args.out}")
 
 
-# ---------- history 子命令 ----------
-def cmd_history(args):
-    """从赛程里取出"选中场两队"在本届此前已踢完的场次，供赛前联网搜真实表现。
-    目标球队来自 --ids（选中场的两队）或 --teams（直接指定）。"""
-    idx = load_index(args.raw_dir)
-    matches = idx.get("matches", [])
-    targets = set()
-    if args.teams:
-        targets |= {t.strip() for t in args.teams.split(",") if t.strip()}
-    if args.ids:
-        want = {s.strip() for s in args.ids.split(",") if s.strip()}
-        for m in matches:
-            if str(m.get("match_id")) in want:
-                for k in ("team_a", "team_b"):
-                    if m.get(k):
-                        targets.add(m[k])
-    if not targets:
-        print("[history] 需用 --ids 或 --teams 指定球队", file=sys.stderr)
-        sys.exit(2)
-    hist = {t: [] for t in targets}
-    for m in matches:
-        sc = m.get("score")
-        if not sc:  # 只看已踢完（有比分）的历史场
-            continue
-        ta, tb = m.get("team_a"), m.get("team_b")
-        sa, sb = sc.get("team_a"), sc.get("team_b")
-        for team, opp, gf, ga, side in ((ta, tb, sa, sb, "主"), (tb, ta, sb, sa, "客")):
-            if team in targets:
-                res = "胜" if (gf or 0) > (ga or 0) else ("负" if (gf or 0) < (ga or 0) else "平")
-                hist[team].append({
-                    "match_id": str(m.get("match_id")),
-                    "kickoff_at": m.get("kickoff_at"),
-                    "stage": m.get("stage"),
-                    "as": side,
-                    "opponent": opp,
-                    "score": f"{sa}:{sb}",        # 该场原始比分（主:客）
-                    "team_score": f"{gf}:{ga}",   # 该队视角 进:失
-                    "result": res,                # 该队 胜/平/负
-                    "comment": m.get("comment") or {},   # 当时6家一句话（喂 Track1：模型当时怎么说）
-                    "bets": m.get("bets") or {},
-                })
-    for t in hist:
-        hist[t].sort(key=lambda x: x.get("kickoff_at") or "")
-    result = {
-        "as_of": idx.get("server_now") or idx.get("generated_at"),
-        "target_teams": sorted(targets),
-        "teams": hist,
-    }
-    Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    n = sum(len(v) for v in hist.values())
-    print(f"[history] {len(targets)} 队、共 {n} 场本届已踢历史 -> {args.out}")
-    for t in sorted(targets):
-        if not hist[t]:
-            print(f"  {t}: 本届尚无已踢场（首秀，跳过）")
-        for g in hist[t]:
-            d = (g["kickoff_at"] or "")[:10]
-            print(f"  {t} [{g['as']}] vs {g['opponent']} {g['score']}（{g['result']}）· {d} {g['stage']}")
-
-
-# ---------- upsets 子命令 ----------
-def cmd_upsets(args):
-    """扫本届已踢完的场，找出"模型共识大热门没赢"的爆冷（冷平 / 弱队取胜），算基准率。
-    只把"有明显共识热门"的场计入分母——这样"热门翻车率"才有意义。供博冷雷达定今日首选。"""
-    idx = load_index(args.raw_dir)
-    matches = idx.get("matches", [])
-    consensus_total = 0   # 有明显共识热门、且已踢完的场数（分母）
-    finished_pred = 0     # 已踢完+有预测的总场数（参考）
-    upsets = []
-    for m in matches:
-        sc = m.get("score")
-        if not sc or not m.get("has_predict"):
-            continue
-        finished_pred += 1
-        bets = m.get("bets") or {}
-        nH, nD, nA = (len(bets.get(k) or []) for k in ("H", "D", "A"))
-        total = nH + nD + nA
-        if total == 0:
-            continue
-        # 共识方向取 H/A 里票多的一方
-        if nH >= nA:
-            fav_side, fav_team, fav_votes, dog_team, other = "H", m.get("team_a"), nH, m.get("team_b"), nA
-        else:
-            fav_side, fav_team, fav_votes, dog_team, other = "A", m.get("team_b"), nA, m.get("team_a"), nH
-        # "明显共识热门"：拿下≥60%的模型票、且比另一方多至少2票（否则算势均力敌、不计爆冷分母）
-        if not (fav_votes >= 0.6 * total and fav_votes - other >= 2):
-            continue
-        consensus_total += 1
-        sa, sb = sc.get("team_a") or 0, sc.get("team_b") or 0
-        actual = "H" if sa > sb else ("A" if sa < sb else "D")
-        if actual != fav_side:  # 热门没赢 = 爆冷
-            kind = "冷平" if actual == "D" else "弱队取胜"
-            upsets.append({
-                "match_id": str(m.get("match_id")),
-                "kickoff_at": m.get("kickoff_at"),
-                "stage": m.get("stage"),
-                "favorite": fav_team,
-                "fav_votes": f"{fav_votes}/{total}",
-                "underdog": dog_team,
-                "score": f"{sa}:{sb}",
-                "kind": kind,
-                "comment": m.get("comment") or {},   # 当时各模型一句话（喂"嘉豪当时怎么看走眼的"）
-            })
-    upsets.sort(key=lambda x: x.get("kickoff_at") or "")
-    nup = len(upsets)
-    ncold = sum(1 for u in upsets if u["kind"] == "冷平")
-    result = {
-        "as_of": idx.get("server_now") or idx.get("generated_at"),
-        "finished_with_prediction": finished_pred,
-        "consensus_favorite_games": consensus_total,   # 分母：有明显共识热门的已踢场
-        "upset_count": nup,
-        "cold_draw": ncold,                            # 热门被逼平
-        "underdog_win": nup - ncold,                   # 弱队真爆冷取胜
-        "upset_rate": round(nup / consensus_total, 3) if consensus_total else None,
-        "upsets": upsets,
-    }
-    Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    rate = f"{round(100 * nup / consensus_total)}%" if consensus_total else "—"
-    print(f"[upsets] 本届有明显共识热门 {consensus_total} 场，爆冷 {nup} 场"
-          f"（冷平 {ncold} · 弱队胜 {nup - ncold}），热门翻车率 {rate} -> {args.out}")
-    for u in upsets:
-        d = (u["kickoff_at"] or "")[:10]
-        print(f"  {u['kind']}: 热门 {u['favorite']}({u['fav_votes']}票) 被 {u['underdog']} {u['score']} · {d} {u['stage']}")
-
-
 def main():
     ap = argparse.ArgumentParser(description="抓取 worldcup.lyihub.com 预测数据")
     ap.add_argument("--raw-dir", help="改为从本地目录读取事先抓好的 JSON（CDP 兜底用）")
@@ -332,16 +204,6 @@ def main():
     pm.add_argument("--ids", required=True, help="逗号分隔的 match_id，如 54329959,54329974")
     pm.add_argument("--out", default="predictions.json")
     pm.set_defaults(func=cmd_matches)
-
-    ph = sub.add_parser("history", help="列出选中场两队本届此前已踢场次（喂赛前真实表现搜索 + Track1）")
-    ph.add_argument("--ids", help="逗号分隔的选中 match_id（取其两队）")
-    ph.add_argument("--teams", help="逗号分隔的队名（与 --ids 二选一或并用）")
-    ph.add_argument("--out", default="history.json")
-    ph.set_defaults(func=cmd_history)
-
-    pu = sub.add_parser("upsets", help="扫本届已踢完场，统计共识热门翻车的爆冷基准率（喂博冷雷达）")
-    pu.add_argument("--out", default="upsets.json")
-    pu.set_defaults(func=cmd_upsets)
 
     args = ap.parse_args()
     args.func(args)
