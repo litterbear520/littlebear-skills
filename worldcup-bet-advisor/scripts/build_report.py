@@ -433,6 +433,87 @@ def render_model_scores(order):
             f'<div class="tabs ms-tabs"><div class="tabs-head" role="tablist">{heads}</div>{panels}</div></section>')
 
 
+def render_retro(retro):
+    """报告最顶部的"上期复盘"：上一期各模型的下注 + 猜分对照终场，沿用报告自身的视觉母题
+    （准确率榜＝鼠尾草进度条 + Fraunces 数字；逐场＝今日赛程同款卡片：队徽 + 终场比分 + 谁押中）。
+    纯呈现 retro.json 里的确定性事实，不写本站判断/校准/买法。无 retro 即不渲染。"""
+    if not retro or not retro.get("matches"):
+        return ""
+    summary = retro.get("summary", [])
+    matches = retro.get("matches", [])
+    order = [s["brand"] for s in summary]  # 排名顺序：榜单 + 卡片里"谁押中"都按它
+
+    # —— 准确率榜：每模型一行，方向命中率走鼠尾草进度条，数字走 Fraunces ——
+    rows = ""
+    for i, s in enumerate(summary):
+        brand = s["brand"]
+        dh, dt = s.get("dir_hit", 0), s.get("dir_total", 0)
+        sc, st = s.get("score_hit", 0), s.get("score_total", 0)
+        pct = round(dh / dt * 100) if dt else 0
+        lead = i == 0 and dh > 0
+        tag = '<span class="rt-tag">上期最准</span>' if lead else ""
+        sc_cls = "" if sc else " zero"
+        rows += (
+            f'<div class="rt-row{" lead" if lead else ""}">'
+            f'<span class="rt-rank">{i+1}</span>'
+            f'<span class="rt-who">{brand_icon(brand)}<i>{esc(brand)}</i>{tag}</span>'
+            f'<span class="rt-meter"><span class="rt-track"><span style="width:{pct}%"></span></span>'
+            f'<span class="rt-dir">{dh}<i>/{dt} 方向</i></span></span>'
+            f'<span class="rt-sc{sc_cls}">比分 <b>{sc}/{st}</b></span>'
+            f'</div>')
+
+    # —— 逐场卡片：照搬今日赛程卡片骨架，中央换终场比分，底部列谁押中方向 / 谁猜中比分 ——
+    cards = ""
+    for m in matches:
+        cells = m.get("cells", {})
+        dir_hits = [b for b in order if cells.get(b, {}).get("dir")]
+        score_hits = [b for b in order if cells.get(b, {}).get("score")]
+
+        final_disp = esc(m.get("final", ""))
+
+        def dir_chips(brands):
+            # 方向：图标 + 悬停看该模型押了啥
+            return "".join(
+                f'<span class="rt-hit" title="{esc(b)}：押 {esc(cells.get(b,{}).get("bet",""))}">'
+                f'{brand_icon(b)}</span>' for b in brands)
+
+        def score_chips(brands):
+            # 比分：图标 + 命中的那个比分（=终场），悬停看该模型完整猜分（含没中的备选）
+            return "".join(
+                f'<span class="rt-schit" title="{esc(b)} 猜 {esc(cells.get(b,{}).get("pred",""))}">'
+                f'{brand_icon(b)}<b>{final_disp}</b></span>' for b in brands)
+
+        dir_cell = (f'<span class="rt-hits dir">{dir_chips(dir_hits)}</span>'
+                    if dir_hits else '<span class="rt-none">六家全黑</span>')
+        score_cell = (f'<span class="rt-hits">{score_chips(score_hits)}</span>'
+                      if score_hits else '<span class="rt-none">无</span>')
+        up = '<span class="up">冷</span>' if m.get("upset") else ""
+        final = final_disp.replace(":", " : ")
+        cards += (
+            f'<div class="rt-card{" up" if m.get("upset") else ""}">'
+            f'<div class="rt-c-top"><span class="rt-c-stage">终场</span>'
+            f'<span class="rt-c-res">{esc(m.get("result",""))}{up}</span></div>'
+            f'<div class="rt-mid">'
+            f'<span class="rt-team">{team_logo_img(m.get("team_a_logo"),"rt-logo")}<b>{esc(m.get("team_a",""))}</b></span>'
+            f'<span class="rt-score">{final}</span>'
+            f'<span class="rt-team">{team_logo_img(m.get("team_b_logo"),"rt-logo")}<b>{esc(m.get("team_b",""))}</b></span></div>'
+            f'<div class="rt-foot">'
+            f'<div class="rt-line"><span class="lab">方向命中</span>{dir_cell}</div>'
+            f'<div class="rt-line"><span class="lab">比分命中</span>{score_cell}</div></div>'
+            f'</div>')
+
+    date = esc(retro.get("reviewed_date", ""))
+    return (f'<section class="retro reveal" id="retro">'
+            f'<div class="mb-head"><span class="mb-k">⬡ 上期复盘</span>'
+            f'<h2 class="mb-title">上期各模型准确率 · {date} {retro.get("n_matches",0)}场</h2></div>'
+            f'<p class="mb-intro">上一期各模型的下注与「最可能比分」对照终场——只摆事实，不构成本站倾向。'
+            f'方向＝实际下注（含让球结算）是否押中胜平负；比分＝最可能比分是否完全命中（多个比分命中任一即算）。</p>'
+            f'<div class="rt-sub">各模型准确率 · 按方向命中排序</div>'
+            f'<div class="rt-board">{rows}</div>'
+            f'<div class="rt-sub">逐场 · 终场比分与谁押中</div>'
+            f'<div class="rt-grid">{cards}</div></section>')
+
+
 def render_nav(order, sections):
     """左侧文档大纲目录栏：先列在场的大块（赛程/三档/博冷/复盘），再逐场。
     sections = [(anchor_id, label), ...]（只含本报告实际存在的大块）。
@@ -738,6 +819,58 @@ a{color:inherit}
 .ms-mk{font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-variant-numeric:tabular-nums;color:var(--ink2)}
 .ms-mk i{font-style:normal;color:var(--muted);margin-left:6px}
 @media(max-width:640px){.ms-row{grid-template-columns:120px 1fr}}
+/* 上期复盘（报告顶部·只摆事实；沿用赛程卡片 + 市场概率条母题） */
+.retro{margin-bottom:50px}
+.rt-sub{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:22px 0 12px}
+/* 准确率榜：每模型一行，鼠尾草进度条＝方向命中率，数字走 Fraunces */
+.rt-board{display:flex;flex-direction:column;gap:8px}
+.rt-row{display:grid;grid-template-columns:24px minmax(118px,148px) 1fr auto;align-items:center;gap:14px;
+  padding:11px 15px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}
+.rt-row.lead{border-color:color-mix(in srgb,var(--clay) 48%,var(--line));background:var(--clay-t)}
+.rt-rank{font-family:"Fraunces",Georgia,serif;font-size:15px;color:var(--muted);text-align:center}
+.rt-row.lead .rt-rank{color:var(--clay-d)}
+.rt-who{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;color:var(--ink);min-width:0}
+.rt-who .bic{width:19px;height:19px;flex:none}
+.rt-who i{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rt-tag{font-size:10px;font-weight:700;color:#fff;background:var(--clay);border-radius:20px;padding:1px 7px;flex:none}
+[data-theme="dark"] .rt-tag{color:#1a140f}
+.rt-meter{display:flex;align-items:center;gap:11px;min-width:0}
+.rt-track{flex:1;height:7px;border-radius:6px;background:var(--paper2);overflow:hidden;border:1px solid var(--line);min-width:54px}
+.rt-track span{display:block;height:100%;background:linear-gradient(90deg,color-mix(in srgb,var(--sage) 78%,var(--paper)),var(--sage))}
+.rt-dir{font-family:"Fraunces",Georgia,serif;font-size:16px;font-weight:600;color:var(--sage);font-variant-numeric:tabular-nums;flex:none}
+.rt-dir i{font-style:normal;font-size:11px;font-family:-apple-system,sans-serif;color:var(--muted);margin-left:3px;font-weight:400}
+.rt-sc{font-size:12px;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:3px 11px;flex:none;white-space:nowrap}
+.rt-sc b{font-family:"Fraunces",Georgia,serif;font-weight:600;color:var(--clay-d);font-variant-numeric:tabular-nums}
+.rt-sc.zero b{color:var(--muted)}
+/* 逐场卡片：照搬今日赛程卡片骨架，中央换成终场比分（Fraunces），底部列谁押中 */
+.rt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(244px,1fr));gap:13px}
+.rt-card{display:flex;flex-direction:column;gap:11px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:14px 15px;box-shadow:var(--shadow-s)}
+.rt-card.up{border-color:var(--upset-line);background:color-mix(in srgb,var(--upset-t) 32%,var(--panel))}
+.rt-c-top{display:flex;justify-content:space-between;align-items:center}
+.rt-c-stage{font-size:11px;color:var(--muted);letter-spacing:.02em}
+.rt-c-res{font-size:11px;font-weight:700;color:var(--clay-d);border:1px solid color-mix(in srgb,var(--clay) 40%,var(--line));
+  background:var(--clay-t);border-radius:20px;padding:2px 10px}
+.rt-card.up .rt-c-res{color:var(--upset-d);background:var(--upset-t);border-color:var(--upset-line)}
+.rt-c-res .up{margin-left:5px;padding-left:6px;border-left:1px solid currentColor;opacity:.85}
+.rt-mid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.rt-team{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;text-align:center}
+.rt-team b{font-size:12.5px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.rt-logo{width:36px;height:36px;border-radius:50%;object-fit:cover;background:var(--paper2);border:1px solid var(--line)}
+.rt-logo.ph{display:inline-block}
+.rt-score{font-family:"Fraunces",Georgia,serif;font-size:23px;font-weight:600;color:var(--clay-d);
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;line-height:1;padding:0 4px}
+.rt-foot{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.rt-line{display:flex;align-items:center;gap:9px;font-size:11.5px;min-height:21px}
+.rt-line .lab{color:var(--muted);flex:none;width:54px;letter-spacing:.02em}
+.rt-hits{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rt-hits .bic{width:21px;height:21px;flex:none}
+.rt-hits.dir .bic{color:var(--sage);border-color:color-mix(in srgb,var(--sage) 45%,var(--line))}
+.rt-schit{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:2px 10px 2px 3px}
+.rt-schit .bic{width:19px;height:19px;flex:none}
+.rt-schit b{font-family:"Fraunces",Georgia,serif;font-weight:600;color:var(--clay-d);font-variant-numeric:tabular-nums;font-size:13px;letter-spacing:.01em}
+.rt-none{color:var(--muted);font-style:italic}
+@media(max-width:640px){.rt-row{grid-template-columns:20px 1fr;gap:8px 11px}.rt-meter{grid-column:1/3}}
 /* 市场怎么看（单场内） */
 .market{margin:2px 0 18px;padding:15px 17px;border:1px solid var(--line);border-radius:14px;background:var(--panel2)}
 .market-h{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
@@ -999,45 +1132,6 @@ tr.val .pbar i{background:linear-gradient(90deg,var(--clay),var(--clay-d))}
 .foot-l{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;padding-top:6px}
 .foot-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);background:var(--panel);border:1px solid var(--line);padding:5px 11px 5px 6px;border-radius:20px;max-width:100%}
 .foot-chip b{color:var(--ink)}.foot-chip i{color:var(--muted)}
-/* 复盘模块（上期回顾，三档方案下面、可折叠） */
-.retro{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin:0 0 46px;overflow:hidden}
-.retro>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:11px;padding:17px 24px;user-select:none}
-.retro[open]>summary{border-bottom:1px solid var(--line)}
-.retro>summary::-webkit-details-marker{display:none}
-.retro-k{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--clay-d);background:var(--clay-t);padding:3px 9px;border-radius:7px;font-weight:700;flex:none}
-.retro-t{font-family:"Fraunces",Georgia,serif;font-size:17px;font-weight:500}
-.retro-hint{margin-left:auto;font-size:11.5px;color:var(--muted)}
-.retro-body{padding:18px 24px 22px}
-.retro-sum{font-size:13.5px;color:var(--ink2);margin-bottom:16px;line-height:1.6}
-.retro-sum b{color:var(--clay-d)}
-.rms{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
-.rm{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--panel2)}
-.rm-h{display:flex;align-items:baseline;gap:8px;margin-bottom:7px}
-.rm-t{font-weight:600;font-size:13.5px}
-.rm-s{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;flex:none}
-.rm-s i{color:var(--muted);font-style:normal;font-size:11.5px;font-weight:500;margin-left:3px}
-.rm-g{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
-.rg{font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);font-variant-numeric:tabular-nums}
-.rg.hit{background:color-mix(in srgb,var(--sage) 16%,transparent);border-color:color-mix(in srgb,var(--sage) 40%,transparent);color:var(--sage)}
-.rg.miss{background:var(--paper2);color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line2)}
-.rg.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--gold)}
-.rm-take{font-size:12px;color:var(--ink2);line-height:1.5}
-.rsub{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:9px}
-.rp-box,.rc-box,.rl-box{margin-top:16px;padding-top:15px;border-top:1px dashed var(--line2)}
-.rp{display:flex;align-items:baseline;gap:9px;font-size:13px;margin-bottom:7px}
-.rp-k{font-weight:600;color:var(--clay-d);min-width:36px;flex:none}
-.rp-n{font-variant-numeric:tabular-nums;font-weight:700;color:var(--sage);flex:none}
-.rp-v{color:var(--ink2)}
-.rc{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:8px;flex-wrap:wrap}
-.rc b{font-weight:700}
-.rc-n{font-variant-numeric:tabular-nums;color:var(--sage);font-weight:600}
-.rc-note{color:var(--ink2)}
-.rl{list-style:none;display:flex;flex-direction:column;gap:6px}
-.rl-p{font-size:12.5px;color:var(--ink2);line-height:1.55}
-.rl li{font-size:12.5px;color:var(--ink2);padding-left:15px;position:relative;line-height:1.5}
-.rl li:before{content:"";position:absolute;left:2px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--clay)}
-.rl-box.adj li:before{background:var(--sage)}
-.retro-sync{margin-top:14px;font-size:11.5px;color:var(--muted);border-top:1px dashed var(--line2);padding-top:11px}
 /* footer */
 footer{margin-top:42px;padding-top:24px;border-top:1px solid var(--line2);color:var(--muted);font-size:12px;line-height:1.7}
 .disc{background:var(--clay-t);border:1px solid var(--val-line);border-radius:12px;padding:15px 17px;color:var(--clay-d);margin-bottom:15px;font-size:12.5px;line-height:1.6}
@@ -1152,11 +1246,13 @@ def build(merged, analysis, out, retro=None, date_arg=None):
     disclaimer = (analysis.get("disclaimer") if analysis else None) or \
         "本报告只做汇总呈现：原样搬运各模型在嘉豪平台的公开预测，叠加竞彩实时倍率，不含本站的任何分析、判断或投注建议。博彩有风险，请理性娱乐、量力而行，未满法定年龄者请勿参与。"
     # 先渲染各大块；目录只列"实际渲染出来"的块，避免锚点对不上
+    retro_html = render_retro(retro)
     sched_html = render_schedule(order)
     mbets_html = render_model_bets(order)
     mscores_html = render_model_scores(order)
     nav_sections = []
     for present, sid, label in (
+        (retro_html, "retro", "上期复盘"),
         (sched_html, "sched", "今日赛程"),
         (mbets_html, "modelbets", "各模型下注"),
         (mscores_html, "modelscores", "各模型比分"),
@@ -1185,6 +1281,7 @@ def build(merged, analysis, out, retro=None, date_arg=None):
 </div></header>
 {render_nav(order, nav_sections)}
 <main class="wrap">
+  {retro_html}
   {sched_html}
   {mbets_html}
   {mscores_html}
@@ -1205,7 +1302,7 @@ def main():
     ap.add_argument("--merged", required=True)
     ap.add_argument("--date", help="报告日期 YYYY-MM-DD（推荐传；缺则从最早开赛时间推北京日期）")
     ap.add_argument("--analysis", help="（已弃用）旧版判断 JSON；现仅可能取 meta.date，纯汇总模式无需传")
-    ap.add_argument("--retro", help="（已弃用）旧版复盘 JSON；汇总模式不再渲染")
+    ap.add_argument("--retro", help="上期复盘 JSON（build_retro.py 产物）；传入则在报告顶部渲染'上期复盘'模块")
     ap.add_argument("--out", default="report.html")
     args = ap.parse_args()
     merged = json.loads(Path(args.merged).read_text(encoding="utf-8"))
