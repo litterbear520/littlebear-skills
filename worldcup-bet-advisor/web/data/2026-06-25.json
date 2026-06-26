@@ -2,9 +2,99 @@
   "date": "2026-06-25",
   "weekday": "周四",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null,
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-25-0",
+      "tier": "自选",
+      "type": "单场固定",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": "日本 vs 瑞典 · 半全场「负胜」（终场1:1=胜平，未中）",
+          "odds": null,
+          "hit": false,
+          "matchNo": "周四058",
+          "home": "日本",
+          "away": "瑞典",
+          "category": "半全场",
+          "pick": "负胜",
+          "stake": 3.0
+        },
+        {
+          "text": "巴拉圭 vs 澳大利亚 · 半全场（终场0:0=平平，未中）",
+          "odds": null,
+          "hit": false,
+          "matchNo": "周四059",
+          "home": "巴拉圭",
+          "away": "澳大利亚",
+          "category": "半全场",
+          "pick": "半全场",
+          "stake": 3.0
+        }
+      ],
+      "stake": 6.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -6.0,
+      "multiple": 1
+    },
+    {
+      "id": "2026-06-25-1",
+      "tier": "自选",
+      "type": "4串1",
+      "legs": [
+        {
+          "text": "厄瓜多尔 vs 德国 · 负（德国胜）@1.38（终场厄2:1爆冷，未中）",
+          "odds": 1.38,
+          "hit": false,
+          "matchNo": "周四055",
+          "home": "厄瓜多尔",
+          "away": "德国",
+          "category": "胜平负",
+          "pick": "负(德国胜)"
+        },
+        {
+          "text": "突尼斯 vs 荷兰 · 受让2球 让平@4.40（终场1:3，+2=3:3，中）",
+          "odds": 4.4,
+          "hit": true,
+          "matchNo": "周四057",
+          "home": "突尼斯",
+          "away": "荷兰",
+          "category": "让球胜平负",
+          "pick": "让平"
+        },
+        {
+          "text": "日本 vs 瑞典 · 让1球 让负@2.00（终场1:1，-1=0:1，中）",
+          "odds": 2.0,
+          "hit": true,
+          "matchNo": "周四058",
+          "home": "日本",
+          "away": "瑞典",
+          "category": "让球胜平负",
+          "pick": "让负"
+        },
+        {
+          "text": "巴拉圭 vs 澳大利亚 · 平@2.15（终场0:0，中）",
+          "odds": 2.15,
+          "hit": true,
+          "matchNo": "周四059",
+          "home": "巴拉圭",
+          "away": "澳大利亚",
+          "category": "胜平负",
+          "pick": "平"
+        }
+      ],
+      "stake": 16.0,
+      "combinedOdds": 26.11,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -16.0,
+      "multiple": 1
+    }
+  ],
+  "dayProfit": -22.0,
+  "dayStake": 22.0,
   "summary": "今天六场全是末轮出线算计盘——已出线的轮换、淘汰的躺平、只需平的踢务实，所以重防平、让球只买浅价值、别凑大串。"
 }
