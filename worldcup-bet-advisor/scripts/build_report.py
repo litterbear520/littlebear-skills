@@ -307,24 +307,22 @@ def render_market(m):
     去水＝把赔率换成概率再扣掉庄家抽水，代表市场实际怎么看这场。"""
     mk = m.get("markets") or {}
     spf = mk.get("spf") or {}
-    outs = spf.get("outcomes") or []
-    bars, fav = "", None
+    outs = [o for o in (spf.get("outcomes") or []) if o.get("fair_prob") is not None]
+    fav = max(outs, key=lambda o: o["fair_prob"], default=None)
+    bars = ""
     for o in outs:
-        fpb = o.get("fair_prob")
-        if fpb is None:
-            continue
-        if fav is None or fpb > fav[1]:
-            fav = (o.get("label", ""), fpb)
-        bars += (f'<div class="mkt-bar"><div class="mkt-bl"><span>{esc(o.get("label",""))}</span>'
-                 f'<b>{fp(fpb)}</b></div><div class="mkt-track">'
-                 f'<span style="width:{round(fpb*100)}%"></span></div>'
-                 f'<span class="mkt-od">@{o.get("odds","")}</span></div>')
+        fpb = o["fair_prob"]
+        bars += (f'<div class="mkt-bar{" fav" if o is fav else ""}">'
+                 f'<span class="mkt-nm">{esc(o.get("label",""))}</span>'
+                 f'<span class="mkt-track"><span style="width:{round(fpb*100)}%"></span></span>'
+                 f'<b class="mkt-pct">{fp(fpb)}</b>'
+                 f'<span class="mkt-od">@{esc(str(o.get("odds","")))}</span></div>')
     top = (mk.get("score") or {}).get("top") or []
     tops = "".join(f'<span class="mkt-sc">{esc(o["label"])}<i>{fp(o["fair_prob"])}</i></span>'
                    for o in top[:5] if o.get("fair_prob") is not None)
     if not bars and not tops:
         return ""
-    judge = f'市场最看好 <b>{esc(fav[0])}</b>（去水 {fp(fav[1])}）' if fav else ""
+    judge = f'市场最看好 <b>{esc(fav.get("label",""))}</b>（去水 {fp(fav["fair_prob"])}）' if fav else ""
     bars_block = (f'<div class="mkt-bars"><div class="mkt-l">胜平负 · 去水概率</div>{bars}</div>'
                   if bars else "")
     tops_block = (f'<div class="mkt-tops"><div class="mkt-l">比分榜 · 市场最看好</div>'
@@ -878,12 +876,14 @@ a{color:inherit}
 .mkt-judge b{color:var(--clay-d);font-weight:700}
 .mkt-l{font-size:12px;color:var(--muted);margin-bottom:8px}
 .mkt-bars{margin-bottom:13px}
-.mkt-bar{display:grid;grid-template-columns:1fr 88px auto;align-items:center;gap:11px;margin-bottom:7px}
-.mkt-bl{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);order:1}
-.mkt-bl b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:700}
-.mkt-track{order:2;grid-column:1/3;height:7px;border-radius:6px;background:var(--paper2);overflow:hidden;border:1px solid var(--line)}
-.mkt-track span{display:block;height:100%;background:linear-gradient(90deg,var(--clay),var(--clay-d))}
-.mkt-od{order:3;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mkt-bar{display:grid;grid-template-columns:56px 1fr 46px 50px;align-items:center;gap:11px;margin-bottom:9px}
+.mkt-nm{font-size:13px;color:var(--ink2);white-space:nowrap}
+.mkt-track{height:8px;border-radius:6px;background:var(--paper2);overflow:hidden;border:1px solid var(--line)}
+.mkt-track span{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,color-mix(in srgb,var(--clay) 70%,var(--paper)),var(--clay))}
+.mkt-pct{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:700;font-size:13.5px;text-align:right}
+.mkt-od{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.mkt-bar.fav .mkt-track span{background:linear-gradient(90deg,var(--clay),var(--clay-d))}
+.mkt-bar.fav .mkt-pct{color:var(--clay-d)}
 .mkt-tops{border-top:1px solid var(--line);padding-top:11px}
 .mkt-scs{display:flex;flex-wrap:wrap;gap:8px}
 .mkt-sc{font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 10px;font-variant-numeric:tabular-nums;color:var(--ink2)}
