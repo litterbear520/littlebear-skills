@@ -953,7 +953,7 @@ a{color:inherit}
 .sch-h{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .sch-h h2{font-family:"Fraunces",Georgia,serif;font-size:20px;font-weight:600}
 .sch-sub{font-size:12px;color:var(--muted)}
-.sch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:13px}
+.sch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(244px,1fr));gap:13px}
 .sch-card{display:flex;flex-direction:column;gap:11px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 15px;text-decoration:none;color:inherit;box-shadow:var(--shadow-s);transition:transform .16s,border-color .16s,box-shadow .16s}
 .sch-card:hover{transform:translateY(-2px);border-color:var(--clay);box-shadow:var(--shadow)}
 .sch-top{display:flex;justify-content:space-between;align-items:center}
