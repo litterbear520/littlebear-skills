@@ -265,21 +265,29 @@ def rank_compare(m):
 FAN_LABELS = ["我更看好", "常规时间方向", "最可能比分", "我敢押的一个具体画面"]
 
 
+# 四点标签可能各占一行，也可能内联挤在同一行（DeepSeek 偶发把四点写成一段）。
+# 按"标签出现位置"切片、不依赖换行——否则行首正则的 (.*)$ 会把同行后面的标签一起吞进首个字段。
+_FAN_FINDER = re.compile(r'(我更看好|常规时间方向|最可能比分|我敢押[^：:\n]{0,12})\s*[：:]')
+
+
 def extract_fan_block(md):
     """从 discussion_md 抠出『## 嘉豪先疯一句』那一段的四个要点，原文照搬。
-    各模型措辞不一（缩进 / 全角冒号 / 加粗），逐行宽松匹配标签即可。"""
+    各模型措辞不一（缩进 / 全角冒号 / 加粗 / 四点内联同一行），按标签出现位置切片。"""
     if not md:
         return None
     mt = re.search(r'##\s*嘉豪先疯一句\s*(.*?)(?:\n\s*---|\n\s*##|\Z)', md, re.S)
     if not mt:
         return None
+    text = mt.group(1).replace("**", "")
+    hits = [(mm.start(), mm.end(),
+             "我敢押的一个具体画面" if mm.group(1).startswith("我敢押") else mm.group(1))
+            for mm in _FAN_FINDER.finditer(text)]
     out = {}
-    for raw in mt.group(1).splitlines():
-        s = raw.strip().lstrip("-*").strip().replace("**", "")
-        for lab in FAN_LABELS:
-            mm = re.match(rf'^{lab}\s*[:：]\s*(.*)$', s)
-            if mm:
-                out[lab] = mm.group(1).strip()
+    for i, (st, en, lab) in enumerate(hits):
+        nxt = hits[i + 1][0] if i + 1 < len(hits) else len(text)
+        val = re.sub(r'[\s\-*·•]+$', '', text[en:nxt].strip())
+        if val and lab not in out:
+            out[lab] = val.strip()
     return out or None
 
 

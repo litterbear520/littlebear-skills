@@ -19,21 +19,29 @@ import json
 import re
 from pathlib import Path
 
-FAN_LABELS = ["我更看好", "常规时间方向", "最可能比分"]
+# 四点标签可能各占一行，也可能内联挤在同一行（DeepSeek 偶发）。按标签出现位置切片、
+# 不依赖换行——否则行首正则会把同行后面的标签连同比分一起吞进"我更看好"，导致比分抽不到。
+_FAN_FINDER = re.compile(r'(我更看好|常规时间方向|最可能比分|我敢押[^：:\n]{0,12})\s*[：:]')
 
 
-def grab(md, lab):
+def parse_fan_block(md):
+    """把『嘉豪先疯一句』段切成 {标签: 原文值}，兼容标签分行或内联同一行两种排版。"""
     if not md:
-        return ""
+        return {}
     mt = re.search(r'##\s*嘉豪先疯一句\s*(.*?)(?:\n\s*---|\n\s*##|\Z)', md, re.S)
     if not mt:
-        return ""
-    for raw in mt.group(1).splitlines():
-        s = raw.strip().lstrip("-*").strip().replace("**", "")
-        m = re.match(rf'^{lab}\s*[:：]\s*(.*)$', s)
-        if m:
-            return m.group(1).strip()
-    return ""
+        return {}
+    text = mt.group(1).replace("**", "")
+    hits = [(mm.start(), mm.end(),
+             "我敢押的一个具体画面" if mm.group(1).startswith("我敢押") else mm.group(1))
+            for mm in _FAN_FINDER.finditer(text)]
+    out = {}
+    for i, (st, en, lab) in enumerate(hits):
+        nxt = hits[i + 1][0] if i + 1 < len(hits) else len(text)
+        val = re.sub(r'[\s\-*·•]+$', '', text[en:nxt].strip())
+        if val and lab not in out:
+            out[lab] = val.strip()
+    return out
 
 
 def load(p):
@@ -47,14 +55,14 @@ def cmd_extract(args):
     for m in order:
         models = []
         for mm in m.get("models", []):
-            md = mm.get("discussion_md")
-            sl = grab(md, "最可能比分")
+            fb = parse_fan_block(mm.get("discussion_md"))
+            sl = fb.get("最可能比分", "")
             if not sl:
                 continue
             models.append({
                 "brand": mm.get("brand"),
-                "favor": grab(md, "我更看好"),
-                "direction": grab(md, "常规时间方向"),
+                "favor": fb.get("我更看好", ""),
+                "direction": fb.get("常规时间方向", ""),
                 "score_line": sl,
             })
         if models:
