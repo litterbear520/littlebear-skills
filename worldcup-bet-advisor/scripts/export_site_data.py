@@ -184,6 +184,9 @@ def settle_ticket(t, idx, date):
     # 倍数（如 5 倍）：有就带上，缺省由前端按 本金/2 推（竞彩 2 元/注）
     if t.get("multiple") is not None:
         out["multiple"] = t.get("multiple")
+    # 复式/系统过关注数（如 5场4关 = 28 注）：前端据此显示「N注·命中X场」而非单一连乘赔率
+    if t.get("combos") is not None:
+        out["combos"] = t.get("combos")
     if t.get("martingale"):
         out["martingale"] = True
     return out

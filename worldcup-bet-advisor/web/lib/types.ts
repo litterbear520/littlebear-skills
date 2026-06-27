@@ -29,6 +29,7 @@ export type Ticket = {
   legs: TicketLeg[];
   stake: number;
   multiple?: number; // 倍数（如 5 倍）；缺省按 本金/2 推（竞彩 2 元/注）
+  combos?: number; // 复式/系统过关注数（如 5场4关=28注）；有则按「N注·命中X场」展示，不显示单一连乘赔率
   combinedOdds: number;
   status: TicketStatus;
   payout: number; // total returned (0 on loss / pending)

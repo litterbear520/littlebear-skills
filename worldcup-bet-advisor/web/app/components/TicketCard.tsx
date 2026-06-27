@@ -18,6 +18,9 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
   const play = ticket.type === "单关" ? "单场固定" : ticket.mode === "independent" ? ticket.type : `过关方式 ${ticket.type}`;
   // 倍数: explicit if recorded, else derive from stake (竞彩 2 元/注, 1 注)
   const multiple = ticket.multiple ?? (ticket.stake ? Math.round(ticket.stake / 2) : null);
+  // 复式/系统过关（如 5场4关=28注）：没有单一连乘赔率，页脚改显「N注·命中X场」
+  const isCombo = ticket.combos != null && ticket.combos > 1;
+  const hitMatches = ticket.legs.filter((l) => l.hit === true).length;
 
   // 独立多注票（单场固定·多个比分）：按场分组、每注一行，不挤成一团
   if (ticket.mode === "independent") {
@@ -81,15 +84,25 @@ export default function TicketCard({ ticket }: { ticket: Ticket }) {
 
       <div className="ticket-foot">
         <div className="ticket-foot-row">
-          {multiple != null ? <span className="dim">{multiple}倍</span> : <span />}
+          {isCombo ? (
+            <span className="dim">{ticket.combos}注{multiple != null ? ` · ${multiple}倍` : ""}</span>
+          ) : multiple != null ? (
+            <span className="dim">{multiple}倍</span>
+          ) : (
+            <span />
+          )}
           <span className="ticket-total">合计 {plainYuan(ticket.stake)}</span>
         </div>
         <div className="ticket-foot-row">
           <span className="foot-l">
-            <span className="odds-chip" title={`回报 ${plainYuan(ticket.payout)}`}>
-              <span className="odds-x">×</span>
-              {odds(ticket.combinedOdds)}
-            </span>
+            {isCombo ? (
+              <span className="dim">命中 {hitMatches}/{ticket.legs.length} 场</span>
+            ) : (
+              <span className="odds-chip" title={`回报 ${plainYuan(ticket.payout)}`}>
+                <span className="odds-x">×</span>
+                {odds(ticket.combinedOdds)}
+              </span>
+            )}
             {isWin ? <span className="dim">回报 {plainYuan(ticket.payout)}</span> : null}
           </span>
           <span className="ticket-profit" style={{ color: profitColor }}>
