@@ -2,8 +2,46 @@
   "date": "2026-06-26",
   "weekday": "周五",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-26-0",
+      "tier": "自选",
+      "type": "5场4关 复式(28注)",
+      "legs": [
+        {
+          "text": "挪威 vs 法国 · 胜平负 选[平@4.15 / 负@1.50] · 终1:4 → 客胜(负)中",
+          "odds": 1.5,
+          "hit": true
+        },
+        {
+          "text": "佛得角 vs 沙特阿拉伯 · 胜平负 选[负@2.62] · 终0:0(平) → 未中",
+          "odds": 2.62,
+          "hit": false
+        },
+        {
+          "text": "乌拉圭 vs 西班牙 · 受让1球 选[胜@2.35 / 平@3.45] · 终0:1→让1:1 → 让平中",
+          "odds": 3.45,
+          "hit": true
+        },
+        {
+          "text": "埃及 vs 伊朗 · 胜平负 选[胜@2.15] · 终1:1(平) → 未中",
+          "odds": 2.15,
+          "hit": false
+        },
+        {
+          "text": "新西兰 vs 比利时 · 受让2球 选[胜@2.62 / 平@3.85] · 终1:5→让3:5(负) → 未中",
+          "odds": 2.62,
+          "hit": false
+        }
+      ],
+      "stake": 56.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -56.0
+    }
+  ],
+  "dayProfit": -56.0,
+  "dayStake": 56.0
 }
