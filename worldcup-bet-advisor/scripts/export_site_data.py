@@ -20,6 +20,7 @@ import json
 import math
 import re
 import sys
+from itertools import combinations, product
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -88,7 +89,86 @@ def cmd_day(args):
     reindex(out_dir)
 
 
+def _leg_options(leg):
+    """一场比赛的选项列表 [{odds,hit}]。复式腿带 `options`（多比分/多让球选择）；
+    单选腿回退到该腿自己的 odds/hit。"""
+    opts = leg.get("options")
+    if opts:
+        return [{"odds": o.get("odds"), "hit": o.get("hit")} for o in opts]
+    return [{"odds": leg.get("odds"), "hit": leg.get("hit")}]
+
+
+def settle_compound(t, idx, date):
+    """复式 / 系统过关（M场N关，带 "pass": N）的部分中奖结算。
+
+    按关数 N 枚举所有「N-注」：先从 M 场里选 N 场，再对这 N 场各取一个选项做
+    笛卡尔积——这就是一张复式票真实的注数（如 4场2关 + 一场复式2选 = 9 注）。
+    每注本金 = 总本金 / 总注数；一注「全中」才回款（各腿赔率连乘），
+    payout = Σ(命中注 每注本金 × 连乘)，profit = payout − 总本金。
+    全有或全无的普通 N 串 1 不会走这里（无 `pass` 字段）。
+    """
+    raw_legs = t.get("legs", [])
+    stake = float(t.get("stake", 0) or 0)
+    npass = int(t.get("pass"))
+    matches = [_leg_options(leg) for leg in raw_legs]
+
+    notes = []  # 所有「注」：每注是被选 N 场各取一个选项的元组
+    for chosen in combinations(range(len(matches)), npass):
+        for picks in product(*(matches[i] for i in chosen)):
+            notes.append(picks)
+    total_combos = len(notes)
+    per_stake = stake / total_combos if total_combos else 0.0
+
+    pending = any(o.get("hit") is None for m in matches for o in m)
+    payout = 0.0
+    for picks in notes:
+        if all(p.get("hit") is True for p in picks):
+            prod = 1.0
+            for p in picks:
+                prod *= float(p.get("odds") or 0)
+            payout += per_stake * prod
+
+    if pending:
+        status, payout_out, profit = "pending", 0.0, 0.0
+    else:
+        payout_out = round(payout, 2)
+        profit = round(payout_out - stake, 2)
+        status = "win" if profit > 0 else "loss"
+
+    # 每场一腿（match-level hit = 该场任一选项命中），供票卡逐场展示 ✓/✗ 与「命中X场」
+    legs = []
+    for leg, opts in zip(raw_legs, matches):
+        hits = [o.get("hit") for o in opts]
+        mhit = None if any(h is None for h in hits) else any(h is True for h in hits)
+        leg_out = {"text": leg.get("text"), "odds": leg.get("odds"), "hit": mhit}
+        for k in ("matchNo", "home", "away", "category", "pick"):
+            if leg.get(k) is not None:
+                leg_out[k] = leg.get(k)
+        legs.append(leg_out)
+
+    out = {
+        "id": t.get("id") or f"{date}-{idx}",
+        "tier": t.get("tier", "自选"),
+        "type": t.get("type") or f"{len(raw_legs)}场{npass}关",
+        "legs": legs,
+        "stake": stake,
+        "combinedOdds": 0,
+        "status": status,
+        "payout": payout_out,
+        "profit": profit,
+        "combos": total_combos,
+    }
+    if t.get("multiple") is not None:
+        out["multiple"] = t.get("multiple")
+    if t.get("martingale"):
+        out["martingale"] = True
+    return out
+
+
 def settle_ticket(t, idx, date):
+    # 复式 / 系统过关（带关数 "pass"）走部分中奖结算，不是全有或全无
+    if t.get("pass") is not None:
+        return settle_compound(t, idx, date)
     raw_legs = t.get("legs", [])
     stake = float(t.get("stake", 0) or 0)
     # 独立多注票（如「单场固定」一张票选多场多个比分）：每注各自单关、独立结算，
