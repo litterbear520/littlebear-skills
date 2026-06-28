@@ -36,52 +36,6 @@ export type Ticket = {
   profit: number; // payout - stake on win, -stake on loss, 0 pending
 };
 
-// 比分叠层（翻倍 / 马丁格尔）：每轮买 scoresPerRound 个候选比分、每注翻倍，中一个收官。
-// 由 export_site_data.py 从带 martingale 标记的比分票按日序还原，写进 index.json。
-export type MartingaleCycle = {
-  wonDate: string; // 收官（命中）那天
-  layers: number; // 第几层命中
-  multiple: number; // 命中层倍数（每比分本金 / baseUnit）
-  hitPick: string | null; // 命中比分，如 "挪威 3:2 塞内加尔"
-  hitOdds: number | null;
-  payout: number;
-  cost: number; // 整轮累计投入（翻倍口径）
-  net: number; // 整轮净盈亏 = payout - cost
-};
-
-export type MartingaleRound = {
-  date: string;
-  multiple: number;
-  perScore: number;
-  total: number;
-  status: TicketStatus;
-  profit: number;
-  won: boolean;
-  hitPick: string | null;
-  hitOdds: number | null;
-  payout: number;
-};
-
-export type MartingaleCurrent = {
-  layer: number; // 已叠到第几层
-  multiple: number; // 当前层倍数
-  cumLoss: number; // 累计已亏（翻倍口径）
-  rounds: MartingaleRound[];
-  nextLayer: number;
-  nextMultiple: number;
-  nextPerScore: number; // 下一层 元/比分
-  nextTotal: number; // 下一层两注合计
-  nextNetIfHit: number; // 下一层命中净赚（按 assumedOdds）
-};
-
-export type Martingale = {
-  baseUnit: number; // 元/比分
-  scoresPerRound: number;
-  assumedOdds: number; // 估算「命中可赚」用的比分赔率
-  current: MartingaleCurrent | null;
-  history: MartingaleCycle[]; // 已命中收官的轮，新→旧
-};
-
 export type DayData = {
   date: string; // YYYY-MM-DD
   weekday?: string;
@@ -110,5 +64,4 @@ export type SiteIndex = {
   totalTickets: number;
   winTickets: number;
   profitSeries: { date: string; profit: number }[]; // settled days, oldest first
-  martingale?: Martingale | null; // 比分叠层（翻倍追分）状态
 };

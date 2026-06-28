@@ -17,7 +17,6 @@
 import argparse
 import datetime
 import json
-import math
 import re
 import sys
 from itertools import combinations, product
@@ -315,112 +314,6 @@ def cmd_settle(args):
     reindex(out_dir)
 
 
-# ---------- 叠层（比分翻倍 / 马丁格尔）核算 ----------
-# 玩法：每轮买 scores_per_round 个候选比分、每比分本金翻倍（base→2·base→4·base…），
-# 中一个就收官、从底注重开。第 k 层每比分押 base·2^(k-1)、整轮 base·2^k、累计已投
-# base·scores·(2^k − 1)。只要比分赔率 O>4，命中即净赚 base·2^(k-1)·(O−4)+base>0。
-# 只认带 "martingale": true 的比分独立票；用其 multiple(=每比分本金/base) 反推层数，
-# 累计/下一注一律按翻倍口径推（早期没单独记票的底层也能正确还原）。
-MART_BASE = 2.0          # 元/比分
-MART_SCORES = 2          # 每轮候选比分数
-MART_ODDS = 6.0          # 估算「命中可赚」用的比分赔率（你实际多在 5.7~17）
-
-
-def _mart_layer(multiple):
-    """multiple(每比分本金/base): 1→第1层, 2→第2层, 4→第3层 …（层=log2(倍数)+1）。"""
-    m = multiple or 1
-    return int(round(math.log2(m))) + 1 if m > 0 else 1
-
-
-def _mart_cost(layer):
-    """翻倍口径下，叠到第 layer 层累计已投 = base·scores·(2^layer − 1)。"""
-    return MART_BASE * MART_SCORES * (2 ** layer - 1)
-
-
-def compute_martingale(settled):
-    """从已结算各天的 martingale 比分票，按日序还原叠层：history(已命中收官轮) + current(进行中)。"""
-    rounds = []
-    for r in sorted(settled, key=lambda r: r["date"]):
-        for t in (r.get("tickets") or []):
-            if not t.get("martingale"):
-                continue
-            mult = t.get("multiple") or 1
-            hit_pick, hit_odds = None, None
-            for leg in (t.get("legs") or []):
-                if leg.get("hit") is True:
-                    pk = leg.get("pick") or leg.get("text") or ""
-                    home, away = leg.get("home"), leg.get("away")
-                    # pick 可能是纯比分("3:2")也可能已含队名("挪威 3:2 塞内加尔")；
-                    # 只有纯比分时才补主客队名，避免重复。
-                    if home and away and re.match(r"^\s*\d+\s*:\s*\d+\s*$", str(pk)):
-                        hit_pick = f"{home} {pk} {away}"
-                    else:
-                        hit_pick = pk
-                    hit_odds = leg.get("odds")
-                    break
-            rounds.append({
-                "date": r["date"],
-                "multiple": mult,
-                "perScore": round(MART_BASE * mult, 2),
-                "total": round(float(t.get("stake") or 0), 2),
-                "status": t.get("status"),
-                "profit": round(float(t.get("profit") or 0), 2),
-                "won": t.get("status") == "win",
-                "hitPick": hit_pick,
-                "hitOdds": hit_odds,
-                "payout": round(float(t.get("payout") or 0), 2),
-            })
-    if not rounds:
-        return None
-
-    history, cur = [], []
-    for rd in rounds:
-        cur.append(rd)
-        if rd["won"]:
-            k = _mart_layer(rd["multiple"])
-            cost = _mart_cost(k)
-            history.append({
-                "wonDate": rd["date"],
-                "layers": k,
-                "multiple": rd["multiple"],
-                "hitPick": rd["hitPick"],
-                "hitOdds": rd["hitOdds"],
-                "payout": rd["payout"],
-                "cost": round(cost, 2),
-                "net": round(rd["payout"] - cost, 2),
-            })
-            cur = []
-    history.reverse()  # 新→旧
-
-    current = None
-    if cur:
-        last = cur[-1]
-        k = _mart_layer(last["multiple"])
-        nk = k + 1
-        next_mult = last["multiple"] * 2
-        next_per = MART_BASE * next_mult
-        next_total = next_per * MART_SCORES
-        next_net = round(next_per * MART_ODDS - _mart_cost(nk), 2)
-        current = {
-            "layer": k,
-            "multiple": last["multiple"],
-            "cumLoss": round(_mart_cost(k), 2),
-            "rounds": cur,
-            "nextLayer": nk,
-            "nextMultiple": next_mult,
-            "nextPerScore": round(next_per, 2),
-            "nextTotal": round(next_total, 2),
-            "nextNetIfHit": next_net,
-        }
-    return {
-        "baseUnit": MART_BASE,
-        "scoresPerRound": MART_SCORES,
-        "assumedOdds": MART_ODDS,
-        "current": current,
-        "history": history,
-    }
-
-
 def reindex(out_dir):
     out_dir = Path(out_dir)
     days = []
@@ -456,8 +349,6 @@ def reindex(out_dir):
     total_tickets = len(all_tickets)
     win_tickets = sum(1 for t in all_tickets if t.get("status") == "win")
 
-    martingale = compute_martingale(settled)
-
     index = {
         "updatedAt": None,
         "days": index_days,
@@ -467,15 +358,9 @@ def reindex(out_dir):
         "totalTickets": total_tickets,
         "winTickets": win_tickets,
         "profitSeries": series,
-        "martingale": martingale,
     }
     dump(out_dir / "index.json", index)
-    mtxt = ""
-    if martingale:
-        cur = martingale.get("current")
-        nh = len(martingale.get("history") or [])
-        mtxt = f", 叠层 往期{nh}轮" + (f"/进行中第{cur['layer']}层(已亏{cur['cumLoss']:g}, 下一层{cur['nextTotal']:g})" if cur else "")
-    print(f"[export] index -> {out_dir / 'index.json'}  ({len(days)} 天/{len(report_dates)} 有报告, 累计 {cumulative:+g}{mtxt})")
+    print(f"[export] index -> {out_dir / 'index.json'}  ({len(days)} 天/{len(report_dates)} 有报告, 累计 {cumulative:+g})")
 
 
 def cmd_reindex(args):
