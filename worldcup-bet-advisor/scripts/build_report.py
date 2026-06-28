@@ -398,44 +398,99 @@ def render_match(idx, m, a, value_labels):
     </section>'''
 
 
-# ---------- 各模型猜测比分一览（tab 切换比赛） ----------
+# ---------- 各模型猜测比分一览（tab 切换比赛 · 共识视角） ----------
+_SCORE_TOK = re.compile(r'(\d{1,2})\s*[:\-：]\s*(\d{1,2})')
+
+
+def _score_tokens(s):
+    """把一个模型的比分原话拆成归一比分 token 列表（主-客，统一成『a:b』）。
+    支持 '1-0 / 1-1' 多选、'2:1 或 1:0' 等夹字写法；同模型内去重保序。
+    若整串抠不出任何 数:数 ，退回清洗后的原文当单 token（不丢信息）。"""
+    if not s:
+        return []
+    toks, seen = [], set()
+    for a, b in _SCORE_TOK.findall(s):
+        t = f"{int(a)}:{int(b)}"
+        if t not in seen:
+            seen.add(t)
+            toks.append(t)
+    if toks:
+        return toks
+    raw = str(s).strip()
+    return [raw] if raw else []
+
+
 def render_model_scores(order):
-    """嘉豪 · 各模型猜测比分一览：每场把各模型『最可能比分』原话并排，附市场比分 top。
-    比分文本一律照搬模型原话（含队名 / 多选 / 平局），不替用户解读朝向。"""
+    """嘉豪 · 各模型猜测比分一览（共识视角）：把视角从「模型→比分」翻成「比分→哪些模型 + 几个」。
+    同一比分被越多模型提到，排得越靠上、占比条越长（扎堆=值得留意）；命中市场比分榜的再标出市场去水概率。
+    比分一律用 agent 归一后的『主队-客队』朝向；多比分（如 1:0 / 1:1）拆开各计一次。"""
     panels, heads, n = "", "", 0
     for m in order:
-        rows = ""
+        # 1) 收集每个模型的归一比分 token（缺归一才退回原话抽取）
+        picks = []  # [(brand, [tok,...])]
         for mod in m.get("models", []):
-            # 优先用 agent 归一到「主队-客队」朝向的纯比分；缺失才退回原话
             sc = mod.get("pred_score_norm")
             if not sc:
                 fb = extract_fan_block(mod.get("discussion_md"))
                 sc = (fb or {}).get("最可能比分")
-            if not sc:
-                continue
-            rows += (f'<div class="ms-row"><span class="ms-m">{brand_icon(mod.get("brand"))}'
-                     f'<i>{esc(mod.get("brand",""))}</i></span>'
-                     f'<span class="ms-sc">{esc(sc)}</span></div>')
-        if not rows:
+            toks = _score_tokens(sc)
+            if toks:
+                picks.append((mod.get("brand", ""), toks))
+        if not picks:
             continue
+        n_models = len(picks)
+        # 2) 市场比分榜（去水概率），键归一成 a:b 以便和模型比分对齐
         top = ((m.get("markets") or {}).get("score") or {}).get("top") or []
-        mkt = "".join(f'<span class="ms-mk">{esc(o["label"])}<i>{fp(o["fair_prob"])}</i></span>'
-                      for o in top[:3] if o.get("fair_prob") is not None)
-        mkt_row = (f'<div class="ms-row ms-mkt"><span class="ms-m">市场比分top</span>'
-                   f'<span class="ms-scs">{mkt}</span></div>') if mkt else ""
+        mkt_prob = {}
+        for o in top:
+            lab = o.get("label")
+            if lab and o.get("fair_prob") is not None:
+                mkt_prob[str(lab).replace("-", ":").replace("：", ":")] = o["fair_prob"]
+        # 3) 按比分聚合：score -> [brand,...]（同比分内同模型去重）
+        tally = {}
+        for brand, toks in picks:
+            for t in toks:
+                bs = tally.setdefault(t, [])
+                if brand not in bs:
+                    bs.append(brand)
+        # 4) 排序：选的人多优先 → 市场概率高优先 → 比分字串兜底
+        items = sorted(tally.items(),
+                       key=lambda kv: (-len(kv[1]), -(mkt_prob.get(kv[0]) or 0), kv[0]))
+        maxc = max(len(v) for _, v in items)
+        rows = ""
+        for score, brands in items:
+            cnt = len(brands)
+            pctw = round(cnt / maxc * 100)
+            lead = cnt == maxc and maxc >= 2  # 全是 1 票时不高亮（谈不上扎堆）
+            chips = "".join(f'<span class="msc-chip">{brand_icon(b)}<i>{esc(b)}</i></span>'
+                            for b in brands)
+            prob = mkt_prob.get(score)
+            mk = f'<span class="msc-mk2">市场 {fp(prob)}</span>' if prob is not None else ""
+            tag = '<span class="msc-tag">最多模型</span>' if lead else ""
+            rows += (f'<div class="msc-row{" lead" if lead else ""}">'
+                     f'<div class="msc-head"><span class="msc-sc">{esc(score)}</span>'
+                     f'<div class="msc-bar"><span style="width:{pctw}%"></span></div>'
+                     f'<span class="msc-n">{cnt}</span><span class="msc-tot">/ {n_models}</span>'
+                     f'{tag}{mk}</div>'
+                     f'<div class="msc-chips">{chips}</div></div>')
+        # 5) 市场比分榜兜底行：没被任何模型选中的高概率比分也别丢
+        mkt = "".join(f'<span class="msc-mk">{esc(o["label"])}<i>{fp(o["fair_prob"])}</i></span>'
+                      for o in top[:4] if o.get("fair_prob") is not None)
+        mkt_row = (f'<div class="msc-mktrow"><span class="msc-mkl">市场比分榜</span>'
+                   f'<span class="msc-scs">{mkt}</span></div>') if mkt else ""
         ta, tb = esc(m["team_a"]), esc(m["team_b"])
         on = " on" if n == 0 else ""
         heads += (f'<button class="tab ms-tab{on}" type="button" role="tab" data-i="{n}">'
                   f'<span class="tt"><span class="tn">{ta}<i>vs</i>{tb}</span></span></button>')
         panels += (f'<div class="tab-panel ms-panel{on}" role="tabpanel" data-i="{n}">'
-                   f'<div class="ms-grid">{rows}{mkt_row}</div></div>')
+                   f'<div class="msc-list">{rows}</div>{mkt_row}</div>')
         n += 1
     if not panels:
         return ""
     return (f'<section class="modelscores reveal" id="modelscores">'
             f'<div class="mb-head"><span class="mb-k">⬡ 嘉豪预测</span>'
             f'<h2 class="mb-title">各模型猜测比分一览</h2></div>'
-            f'<p class="mb-intro">每场各模型『最可能比分』按主客朝向归一后的比分（主队-客队，多个比分用斜杠分隔）——点上方标签切换比赛，末行是市场比分榜最看好的几个。</p>'
+            f'<p class="mb-intro">把同一比分被几个模型提到摆到一起——选的模型越多，排得越靠上、占比条越长，<b>扎堆＝该画面值得留意</b>。每行图标即选它的模型；多比分（如 1:0 / 1:1）拆开各计一次。命中市场比分榜的标出市场去水概率（模型＋市场都看好＝信号更强）。点上方标签切换比赛。</p>'
             f'<div class="tabs ms-tabs"><div class="tabs-head" role="tablist">{heads}</div>{panels}</div></section>')
 
 
@@ -811,20 +866,30 @@ a{color:inherit}
 .mb-ic .bic{width:18px;height:18px;flex:none}
 .mb-empty{color:var(--muted);font-size:18px;line-height:1}
 @media(max-width:640px){.mb-grid{grid-template-columns:1fr}.mb-tab{min-width:0;flex:1 1 42%}}
-/* 各模型猜测比分一览 */
+/* 各模型猜测比分一览 · 共识视角：比分→哪些模型+几个，扎堆者居顶高亮 */
 .modelscores{margin-bottom:50px}
-.ms-grid{display:flex;flex-direction:column;gap:8px}
-.ms-row{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:center;gap:14px;padding:11px 14px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
-.ms-m{display:inline-flex;align-items:center;gap:8px;font-weight:700;color:var(--ink2);font-size:13.5px}
-.ms-m i{font-style:normal}
-.ms-m .bic{width:18px;height:18px;flex:none}
-.ms-sc{font-family:"Fraunces",Georgia,serif;font-size:17px;font-weight:600;color:var(--clay-d);font-variant-numeric:tabular-nums;min-width:0;letter-spacing:.01em}
-.ms-mkt{background:var(--paper2);border-style:dashed}
-.ms-mkt .ms-m{color:var(--muted)}
-.ms-scs{display:flex;flex-wrap:wrap;gap:8px}
-.ms-mk{font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-variant-numeric:tabular-nums;color:var(--ink2)}
-.ms-mk i{font-style:normal;color:var(--muted);margin-left:6px}
-@media(max-width:640px){.ms-row{grid-template-columns:120px 1fr}}
+.msc-list{display:flex;flex-direction:column;gap:9px}
+.msc-row{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel2)}
+.msc-row.lead{border-color:color-mix(in srgb,var(--clay) 55%,var(--line));background:var(--clay-t)}
+.msc-head{display:flex;align-items:center;gap:13px}
+.msc-sc{font-family:"Fraunces",Georgia,serif;font-size:22px;font-weight:600;color:var(--clay-d);font-variant-numeric:tabular-nums;min-width:48px}
+.msc-bar{flex:1;height:9px;border-radius:6px;background:var(--paper2);overflow:hidden;border:1px solid var(--line);min-width:54px}
+.msc-bar span{display:block;height:100%;background:linear-gradient(90deg,color-mix(in srgb,var(--clay) 60%,var(--paper)),var(--clay))}
+.msc-n{font-family:"Fraunces",Georgia,serif;font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.msc-tot{font-size:12px;color:var(--muted);margin-left:-8px}
+.msc-tag{font-size:10px;font-weight:700;color:#fff;background:var(--clay);border-radius:20px;padding:2px 8px;flex:none;white-space:nowrap}
+[data-theme="dark"] .msc-tag{color:#1a140f}
+.msc-mk2{font-size:11.5px;color:var(--clay-d);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:2px 9px;flex:none;white-space:nowrap}
+.msc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;padding-left:61px}
+.msc-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:3px 10px 3px 7px}
+.msc-chip .bic{width:15px;height:15px;flex:none}
+.msc-chip i{font-style:normal}
+.msc-mktrow{display:flex;align-items:center;gap:12px;margin-top:11px;padding:10px 14px;border:1px dashed var(--line2);border-radius:12px;background:var(--paper2)}
+.msc-mkl{font-size:12px;font-weight:700;color:var(--muted);flex:none}
+.msc-scs{display:flex;flex-wrap:wrap;gap:8px}
+.msc-mk{font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.msc-mk i{font-style:normal;color:var(--muted);margin-left:6px}
+@media(max-width:640px){.msc-chips{padding-left:0}.msc-sc{min-width:42px;font-size:20px}.msc-mktrow{flex-direction:column;align-items:flex-start;gap:7px}}
 /* 上期复盘（报告顶部·只摆事实；沿用赛程卡片 + 市场概率条母题） */
 .retro{margin-bottom:50px}
 .rt-sub{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:22px 0 12px}
