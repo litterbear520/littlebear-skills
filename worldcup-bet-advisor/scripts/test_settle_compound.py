@@ -6,6 +6,7 @@
 每注本金 = 总本金 / 总注数；profit = 回款 - 总本金。
 两张真实票（2026-06-27 周六067-072 终场）作为黄金用例。
 """
+import copy
 import os
 import sys
 
@@ -96,6 +97,18 @@ def main():
     total_profit = round(t1["profit"] + t2["profit"], 2)
     if not approx(total_profit, -6.19):
         fails.append(f"两票合计净应 ≈-6.19，实际 {total_profit}")
+
+    # 脏数据防御：关数 pass 必须 1<=pass<=场数，否则报错而不是静默把脏票当全输
+    for bad_pass, why in [(9, "pass>场数"), (0, "pass=0"), (-1, "pass<0")]:
+        bad = copy.deepcopy(TICKET1)
+        bad["pass"] = bad_pass  # TICKET1 只有 4 场
+        try:
+            settle_ticket(bad, 99, "2026-06-27")
+            fails.append(f"{why} 应抛 ValueError，却被静默接受")
+        except ValueError:
+            pass
+        except Exception as e:  # noqa: BLE001
+            fails.append(f"{why} 应抛 ValueError，却抛了 {type(e).__name__}")
 
     if fails:
         print("FAIL:")

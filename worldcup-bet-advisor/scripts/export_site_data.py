@@ -112,6 +112,14 @@ def settle_compound(t, idx, date):
     npass = int(t.get("pass"))
     matches = [_leg_options(leg) for leg in raw_legs]
 
+    # 关数必须 1≤pass≤场数；否则是录入错误（如 pass 写大于场数会枚举出 0 注、
+    # pass=0 会把空组合当成全中），直接报错而不是静默把脏票算成全输/全中。
+    if not (1 <= npass <= len(matches)):
+        raise ValueError(
+            f"复式过关票 {t.get('id') or idx} 的关数 pass={npass} 非法："
+            f"必须 1≤pass≤场数({len(matches)})。请检查 settle.json。"
+        )
+
     notes = []  # 所有「注」：每注是被选 N 场各取一个选项的元组
     for chosen in combinations(range(len(matches)), npass):
         for picks in product(*(matches[i] for i in chosen)):
