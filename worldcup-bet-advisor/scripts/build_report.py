@@ -460,19 +460,20 @@ def render_model_scores(order):
         rows = ""
         for score, brands in items:
             cnt = len(brands)
-            pctw = round(cnt / maxc * 100)
+            pctw = round(cnt / n_models * 100)  # 占比＝该比分模型数 / 总模型数（与右侧 /N 一致）
             lead = cnt == maxc and maxc >= 2  # 全是 1 票时不高亮（谈不上扎堆）
             chips = "".join(f'<span class="msc-chip">{brand_icon(b)}<i>{esc(b)}</i></span>'
                             for b in brands)
             prob = mkt_prob.get(score)
             mk = f'<span class="msc-mk2">市场 {fp(prob)}</span>' if prob is not None else ""
             tag = '<span class="msc-tag">最多模型</span>' if lead else ""
+            # 横条轨道靠「比分 + 条 + 定宽计数」固定，长短只由人数决定；变宽的标签放到第二行
+            tags = f'<div class="msc-tags">{tag}{mk}</div>' if (tag or mk) else ""
             rows += (f'<div class="msc-row{" lead" if lead else ""}">'
                      f'<div class="msc-head"><span class="msc-sc">{esc(score)}</span>'
                      f'<div class="msc-bar"><span style="width:{pctw}%"></span></div>'
-                     f'<span class="msc-n">{cnt}</span><span class="msc-tot">/ {n_models}</span>'
-                     f'{tag}{mk}</div>'
-                     f'<div class="msc-chips">{chips}</div></div>')
+                     f'<span class="msc-cnt"><b>{cnt}</b><i>/{n_models}</i></span></div>'
+                     f'<div class="msc-foot"><div class="msc-chips">{chips}</div>{tags}</div></div>')
         # 5) 市场比分榜兜底行：没被任何模型选中的高概率比分也别丢
         mkt = "".join(f'<span class="msc-mk">{esc(o["label"])}<i>{fp(o["fair_prob"])}</i></span>'
                       for o in top[:4] if o.get("fair_prob") is not None)
@@ -872,15 +873,18 @@ a{color:inherit}
 .msc-row{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel2)}
 .msc-row.lead{border-color:color-mix(in srgb,var(--clay) 55%,var(--line));background:var(--clay-t)}
 .msc-head{display:flex;align-items:center;gap:13px}
-.msc-sc{font-family:"Fraunces",Georgia,serif;font-size:22px;font-weight:600;color:var(--clay-d);font-variant-numeric:tabular-nums;min-width:48px}
+.msc-sc{font-family:"Fraunces",Georgia,serif;font-size:22px;font-weight:600;color:var(--clay-d);font-variant-numeric:tabular-nums;min-width:48px;flex:none}
 .msc-bar{flex:1;height:9px;border-radius:6px;background:var(--paper2);overflow:hidden;border:1px solid var(--line);min-width:54px}
 .msc-bar span{display:block;height:100%;background:linear-gradient(90deg,color-mix(in srgb,var(--clay) 60%,var(--paper)),var(--clay))}
-.msc-n{font-family:"Fraunces",Georgia,serif;font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
-.msc-tot{font-size:12px;color:var(--muted);margin-left:-8px}
+.msc-cnt{flex:none;min-width:42px;display:inline-flex;align-items:baseline;justify-content:flex-end;gap:2px;white-space:nowrap}
+.msc-cnt b{font-family:"Fraunces",Georgia,serif;font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.msc-cnt i{font-style:normal;font-size:12px;color:var(--muted)}
 .msc-tag{font-size:10px;font-weight:700;color:#fff;background:var(--clay);border-radius:20px;padding:2px 8px;flex:none;white-space:nowrap}
 [data-theme="dark"] .msc-tag{color:#1a140f}
 .msc-mk2{font-size:11.5px;color:var(--clay-d);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:2px 9px;flex:none;white-space:nowrap}
-.msc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;padding-left:61px}
+.msc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;padding-left:61px}
+.msc-chips{display:flex;flex-wrap:wrap;gap:6px}
+.msc-tags{display:flex;align-items:center;gap:6px;flex:none}
 .msc-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:3px 10px 3px 7px}
 .msc-chip .bic{width:15px;height:15px;flex:none}
 .msc-chip i{font-style:normal}
@@ -889,7 +893,7 @@ a{color:inherit}
 .msc-scs{display:flex;flex-wrap:wrap;gap:8px}
 .msc-mk{font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-variant-numeric:tabular-nums;color:var(--ink2)}
 .msc-mk i{font-style:normal;color:var(--muted);margin-left:6px}
-@media(max-width:640px){.msc-chips{padding-left:0}.msc-sc{min-width:42px;font-size:20px}.msc-mktrow{flex-direction:column;align-items:flex-start;gap:7px}}
+@media(max-width:640px){.msc-foot{padding-left:0;flex-wrap:wrap;justify-content:flex-start}.msc-sc{min-width:42px;font-size:20px}.msc-mktrow{flex-direction:column;align-items:flex-start;gap:7px}}
 /* 上期复盘（报告顶部·只摆事实；沿用赛程卡片 + 市场概率条母题） */
 .retro{margin-bottom:50px}
 .rt-sub{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:22px 0 12px}
