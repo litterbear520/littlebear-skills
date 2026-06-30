@@ -2,8 +2,64 @@
   "date": "2026-06-29",
   "weekday": "周一",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-29-t1",
+      "tier": "自选",
+      "type": "二串一复式 (巴西×德国 = 4注)",
+      "legs": [
+        {
+          "text": "巴西 [比分2-1 / 让胜] vs 日本",
+          "odds": null,
+          "hit": true,
+          "home": "巴西",
+          "away": "日本"
+        },
+        {
+          "text": "德国 [让胜 / 比分2-1] vs 巴拉圭",
+          "odds": null,
+          "hit": false,
+          "home": "德国",
+          "away": "巴拉圭"
+        }
+      ],
+      "stake": 40.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -40.0,
+      "combos": 4
+    },
+    {
+      "id": "2026-06-29-t2",
+      "tier": "自选",
+      "type": "二串一复式 (巴西×德国 = 3注)",
+      "legs": [
+        {
+          "text": "巴西 [比分1-0] vs 日本",
+          "odds": null,
+          "hit": false,
+          "home": "巴西",
+          "away": "日本"
+        },
+        {
+          "text": "德国 [让胜 / 比分1-0 / 比分2-1] vs 巴拉圭",
+          "odds": null,
+          "hit": false,
+          "home": "德国",
+          "away": "巴拉圭"
+        }
+      ],
+      "stake": 30.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -30.0,
+      "combos": 3
+    }
+  ],
+  "dayProfit": -70.0,
+  "dayStake": 70.0,
+  "summary": "二串一混合过关两单，腿腿带德国让胜/比分；德国常规 1-1 平，德国腿全挂 → 7 注全军覆没 -70。"
 }
