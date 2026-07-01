@@ -2,8 +2,78 @@
   "date": "2026-06-30",
   "weekday": "周二",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-06-30-t1",
+      "tier": "自选",
+      "type": "三串一比分复式 (科×法×墨 = 4注)",
+      "legs": [
+        {
+          "text": "科特迪瓦 [比分1-1] vs 挪威",
+          "odds": null,
+          "hit": false,
+          "home": "科特迪瓦",
+          "away": "挪威"
+        },
+        {
+          "text": "法国 [比分2-1 / 3-1] vs 瑞典",
+          "odds": null,
+          "hit": false,
+          "home": "法国",
+          "away": "瑞典"
+        },
+        {
+          "text": "墨西哥 [比分1-2 / 1-1] vs 厄瓜多尔",
+          "odds": null,
+          "hit": false,
+          "home": "墨西哥",
+          "away": "厄瓜多尔"
+        }
+      ],
+      "stake": 16.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -16.0,
+      "combos": 4
+    },
+    {
+      "id": "2026-06-30-t2",
+      "tier": "自选",
+      "type": "三串一混合过关 (科比分×法比分×墨总进球 = 3注)",
+      "legs": [
+        {
+          "text": "科特迪瓦 [比分1-1] vs 挪威",
+          "odds": null,
+          "hit": false,
+          "home": "科特迪瓦",
+          "away": "挪威"
+        },
+        {
+          "text": "法国 [比分2-1 / 3-1 / 2-0] vs 瑞典",
+          "odds": null,
+          "hit": false,
+          "home": "法国",
+          "away": "瑞典"
+        },
+        {
+          "text": "墨西哥 [总进球1] vs 厄瓜多尔",
+          "odds": null,
+          "hit": false,
+          "home": "墨西哥",
+          "away": "厄瓜多尔"
+        }
+      ],
+      "stake": 12.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -12.0,
+      "combos": 3
+    }
+  ],
+  "dayProfit": -28.0,
+  "dayStake": 28.0,
+  "summary": "两张三串一(比分复式¥16 + 混合过关¥12),三腿共享科特迪瓦(1:1)。科特迪瓦常规1-2负、法国3-0、墨西哥2-0——科(1:1)/法(2:1·3:1·2:0)/墨(比分1-2·1-1 与总进球1)六项无一命中 → 7注全灭 -28。"
 }
