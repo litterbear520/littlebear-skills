@@ -138,6 +138,7 @@ python scripts/normalize_scores.py apply --merged "$WS/merged.json" --norm "$WS/
    ```bash
    python scripts/fetch_predictions.py index --include-finished --out "$WS/finals.json"
    ```
+   **⚠ 淘汰赛必核常规时间比分**：竞彩按**常规时间（90 分钟+补时）**结算，而 worldcup 站的 `score` 在打了加时的场次给的是**加时后总比分**。上期若是淘汰赛（阶段含"决赛"），逐场联网核实有没有加时；有加时的场把 `finals.json` 里该场 `score` 改回常规时间比分（另存 `finals_reg.json` 喂给 build_retro）。已两次踩坑：06-30 科特迪瓦 vs 挪威、07-01 比利时 vs 塞内加尔（常规 2-2、加时 3-2，首版复盘误用 3-2 返工）。
 3. **算复盘事实**：`build_retro.py` 读上期 merged（各模型 bet / `pred_score_norm` / 让球线）+ 终场，逐场逐模型判**方向**（实际下注是否押中胜平负，让球按 `主队进球 + 让球线` 结算）和**比分**（最可能比分是否完全命中、多个比分命中任一即算），再算各模型命中数、按方向命中排序：
    ```bash
    python scripts/build_retro.py --prev-merged "runs/<上期>/merged.json" \
