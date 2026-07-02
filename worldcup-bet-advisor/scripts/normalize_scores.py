@@ -78,9 +78,82 @@ def cmd_extract(args):
     print("[normalize] 接下来 agent 读它，按『主队-客队』把每条比分归一，写出 norm_out.json，再跑 apply")
 
 
+# 归一结果格式："2-1" 或 "2-1 / 1-1"（多比分用 " / " 连接）
+_NORM_FMT = re.compile(r'^\d+-\d+(?:\s*/\s*\d+-\d+)*$')
+# 原话里的比分对："2-1"、"2:0"、"2比1" 都认
+_SCORE_PAIR = re.compile(r'(\d+)\s*[-:：比]\s*(\d+)')
+
+
+def check_norm(merged, norm):
+    """归一自洽校验。errors 挡写入（格式非法 / 数字与原话对不上——正文可能已刷新）；
+    warns 只提醒（朝向与 favor 疑似矛盾、漏归一、brand/match_id 对不上）。
+    只校验确定性事实，朝向本身仍是 agent 的判断、不代判。"""
+    errors, warns = [], []
+    for mid, mp in norm.items():
+        m = merged.get(mid)
+        if m is None:
+            warns.append(f"match_id {mid} 在 merged 里不存在（写错了？）该场 {len(mp)} 条不会生效")
+            continue
+        byb = {mm.get("brand"): mm for mm in m.get("models", [])}
+        label = f'{m["team_a"]} vs {m["team_b"]}'
+        for brand, val in mp.items():
+            if val is None:
+                continue
+            mm = byb.get(brand)
+            if mm is None:
+                warns.append(f"{label} · {brand}: merged 里没有这个模型（brand 拼写？）该条不会生效")
+                continue
+            v = str(val).strip()
+            if not _NORM_FMT.match(v):
+                errors.append(f'{label} · {brand}: 格式非法 "{v}"（应为 "2-1" 或 "2-1 / 1-1"）')
+                continue
+            norm_items = [(s, tuple(sorted(int(x) for x in s.split("-"))))
+                          for s in re.split(r'\s*/\s*', v)]
+            fb = parse_fan_block(mm.get("discussion_md"))
+            sl = " ".join(fb.get("最可能比分", "").split())  # 折叠换行，便于嵌进消息
+            src_pairs = [tuple(sorted((int(a), int(b)))) for a, b in _SCORE_PAIR.findall(sl)]
+            if src_pairs:
+                for s, np_ in norm_items:
+                    if np_ not in src_pairs:
+                        errors.append(
+                            f'{label} · {brand}: 归一 "{v}" 里的 {s} 在原话「{sl}」找不到对应数字'
+                            f'——正文可能已被站点刷新，先跑 fetch_predictions.py verify 再重归一')
+                # 漏归一数目只看常规时间部分：淘汰赛原话常带"加时 2-1/点球"比分，按规则本就不归一
+                reg = re.split(r'加时|点球', sl)[0]
+                reg_pairs = {tuple(sorted((int(a), int(b)))) for a, b in _SCORE_PAIR.findall(reg)}
+                if len(norm_items) < len(reg_pairs):
+                    warns.append(f'{label} · {brand}: 原话「{sl}」常规时间给了 {len(reg_pairs)} 个比分、归一只有 {len(norm_items)} 个（漏了？）')
+            # 朝向自洽：favor/direction 明确点了某队、归一却全是对方赢 → 疑似判反（平局不算矛盾）
+            favor = f'{fb.get("我更看好", "")} {fb.get("常规时间方向", "")}'
+            ta, tb = m["team_a"], m["team_b"]
+            hit_a, hit_b = ta and ta in favor, tb and tb in favor
+            if hit_a != hit_b:  # 恰好点名一队才可判
+                decisive = [tuple(int(x) for x in s.split("-")) for s in re.split(r'\s*/\s*', v)]
+                decisive = [(h, a) for h, a in decisive if h != a]
+                if decisive and all((a > h) if hit_a else (h > a) for h, a in decisive):
+                    warns.append(
+                        f'{label} · {brand}: favor 提到「{ta if hit_a else tb}」但归一 "{v}" 全是对方赢'
+                        f'——若原话是"某队踢不赢/会输"类反着点名的可忽略，否则朝向判反了')
+        # 漏归一：有最可能比分却没给归一结果
+        for mm in m.get("models", []):
+            if mm.get("brand") in mp:
+                continue
+            if parse_fan_block(mm.get("discussion_md")).get("最可能比分"):
+                warns.append(f'{label} · {mm.get("brand")}: 原话有最可能比分但 norm_out 里没有这条（漏归一？）')
+    return errors, warns
+
+
 def cmd_apply(args):
     merged = load(args.merged)
     norm = load(args.norm)
+    errors, warns = check_norm(merged, norm)
+    for w in warns:
+        print(f"[normalize] ⚠ {w}")
+    if errors:
+        for e in errors:
+            print(f"[normalize] ✗ {e}")
+        print(f"[normalize] 校验不通过（{len(errors)} 处硬伤），未写回。修正 norm_out.json 后重跑 apply")
+        raise SystemExit(1)
     applied = 0
     for m in merged.values():
         mp = norm.get(m["match_id"]) or {}
@@ -90,7 +163,8 @@ def cmd_apply(args):
                 mm["pred_score_norm"] = str(v).strip()
                 applied += 1
     Path(args.merged).write_text(json.dumps(merged, ensure_ascii=False), encoding="utf-8")
-    print(f"[normalize] apply {applied} 条 pred_score_norm 写回 -> {args.merged}")
+    tail = f"；⚠ {len(warns)} 条提醒请回头复核" if warns else ""
+    print(f"[normalize] apply {applied} 条 pred_score_norm 写回 -> {args.merged}{tail}")
 
 
 def main():

@@ -1353,7 +1353,7 @@ def build(merged, analysis, out, retro=None, date_arg=None):
   <div class="meta-row">
     <span class="mk-l">覆盖模型 <span class="agent-tags">{agent_tags}</span></span>
     <span class="mk-l">覆盖比赛 <b>{len(order)} 场</b></span>
-    <span class="mk-l">生成时间 <b>{esc(meta.get("generated_at",""))}</b></span>
+    <span class="mk-l">生成时间 <b>{esc(meta.get("generated_at") or datetime.now(BEIJING).strftime("%Y-%m-%d %H:%M"))}</b></span>
   </div>
 </div></header>
 {render_nav(order, nav_sections)}

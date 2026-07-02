@@ -154,40 +154,99 @@ def extract_model(p, team_a, team_b):
     }
 
 
+def build_match_entry(mid, j, net, logo_a=None, logo_b=None):
+    """把单场详情 JSON 组装成 predictions.json 的一场条目。
+    logo_a/logo_b 传入已有的 base64 徽标可跳过重复下载（verify 复用旧图）。"""
+    match = j.get("match", {})
+    team_a = match.get("team_a")
+    team_b = match.get("team_b")
+    models = [extract_model(p, team_a, team_b) for p in j.get("llm_predict", [])]
+    # 站点自带的简版赔率（仅 HHAD 一条），仅作参考；真实全玩法倍率来自 odds 侧
+    return {
+        "match_id": mid,
+        "team_a": team_a,
+        "team_b": team_b,
+        "team_a_id": match.get("team_a_id"),
+        "team_b_id": match.get("team_b_id"),
+        "team_a_logo": logo_a or fetch_logo_b64(match.get("team_a_id"), enable=net),  # base64 圆形徽标
+        "team_b_logo": logo_b or fetch_logo_b64(match.get("team_b_id"), enable=net),
+        "kickoff_at": match.get("kickoff_at"),
+        "stage": match.get("stage"),
+        "venue": match.get("venue"),
+        "weather": match.get("weather"),
+        "site_odds": match.get("odds"),
+        "models": models,
+    }
+
+
 def cmd_matches(args):
     ids = [s.strip() for s in args.ids.split(",") if s.strip()]
     result = {}
+    net = not args.raw_dir  # CDP 兜底/离线时不走网络抓徽标，降级纯文字
     for mid in ids:
         try:
             j = load_match(mid, args.raw_dir)
         except Exception as e:
             print(f"[warn] 抓取 {mid} 失败: {e}", file=sys.stderr)
             continue
-        match = j.get("match", {})
-        team_a = match.get("team_a")
-        team_b = match.get("team_b")
-        models = [extract_model(p, team_a, team_b) for p in j.get("llm_predict", [])]
-        net = not args.raw_dir  # CDP 兜底/离线时不走网络抓徽标，降级纯文字
-        # 站点自带的简版赔率（仅 HHAD 一条），仅作参考；真实全玩法倍率来自 odds 侧
-        result[mid] = {
-            "match_id": mid,
-            "team_a": team_a,
-            "team_b": team_b,
-            "team_a_id": match.get("team_a_id"),
-            "team_b_id": match.get("team_b_id"),
-            "team_a_logo": fetch_logo_b64(match.get("team_a_id"), enable=net),  # base64 圆形徽标
-            "team_b_logo": fetch_logo_b64(match.get("team_b_id"), enable=net),
-            "kickoff_at": match.get("kickoff_at"),
-            "stage": match.get("stage"),
-            "venue": match.get("venue"),
-            "weather": match.get("weather"),
-            "site_odds": match.get("odds"),
-            "models": models,
-        }
-        brands = ", ".join(f"{m['brand']}({m['bet_direction'] or '暂无投注'})" for m in models)
-        print(f"[match] {mid} {team_a} vs {team_b} | {brands}")
+        entry = build_match_entry(mid, j, net)
+        result[mid] = entry
+        brands = ", ".join(f"{m['brand']}({m['bet_direction'] or '暂无投注'})" for m in entry["models"])
+        print(f"[match] {mid} {entry['team_a']} vs {entry['team_b']} | {brands}")
     Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[matches] {len(result)} 场 -> {args.out}")
+
+
+# ---------- verify 子命令 ----------
+def cmd_verify(args):
+    """重抓 --against 里的场次，比对各模型正文/下注是否被站点刷新。
+
+    嘉豪站临近开赛会更新模型预测（06-30 实际发生过：首抓旧版被固化进报告）。
+    生成报告前跑一次：一致 → 放心出报告；有变化 → --update 把最新预测原位写回，
+    再重跑 merge 与比分归一（只需重判输出里列出的 场×模型）。"""
+    old = json.loads(Path(args.against).read_text(encoding="utf-8"))
+    changes = []          # (label, brand, 变化说明)
+    fresh_entries = {}    # mid -> 最新条目（--update 用）
+    for mid, o in old.items():
+        try:
+            j = load_match(mid, args.raw_dir)
+        except Exception as e:
+            print(f"[warn] 重抓 {mid} 失败，跳过该场核对: {e}", file=sys.stderr)
+            continue
+        entry = build_match_entry(mid, j, net=not args.raw_dir,
+                                  logo_a=o.get("team_a_logo"), logo_b=o.get("team_b_logo"))
+        fresh_entries[mid] = entry
+        label = f"{entry['team_a']} vs {entry['team_b']}"
+        oldm = {m.get("brand"): m for m in o.get("models", [])}
+        newm = {m.get("brand"): m for m in entry["models"]}
+        for brand in sorted(set(oldm) | set(newm)):
+            a, b = oldm.get(brand), newm.get(brand)
+            if a is None:
+                changes.append((label, brand, "新增模型"))
+                continue
+            if b is None:
+                changes.append((label, brand, "模型消失"))
+                continue
+            what = []
+            if (a.get("discussion_md") or "") != (b.get("discussion_md") or ""):
+                what.append("正文已刷新")
+            if (a.get("bet") or {}) != (b.get("bet") or {}):
+                what.append(f"下注已变({a.get('bet_direction') or '无'} → {b.get('bet_direction') or '无'})")
+            if what:
+                changes.append((label, brand, "、".join(what)))
+    if not changes:
+        print(f"[verify] = 全部一致（{len(fresh_entries)}/{len(old)} 场已核对）——可直接生成报告")
+        return
+    print(f"[verify] ≠ 检出 {len(changes)} 处变化（站点赛前刷新了预测）：")
+    for label, brand, what in changes:
+        print(f"  ≠ {label} · {brand}: {what}")
+    if args.update:
+        merged = dict(old)
+        merged.update(fresh_entries)
+        Path(args.against).write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"[verify] 已把最新预测写回 {args.against}；请重跑 merge，并重新归一上面列出的条目")
+    else:
+        print(f"[verify] 加 --update 可把最新预测写回 {args.against}")
 
 
 def main():
@@ -204,6 +263,11 @@ def main():
     pm.add_argument("--ids", required=True, help="逗号分隔的 match_id，如 54329959,54329974")
     pm.add_argument("--out", default="predictions.json")
     pm.set_defaults(func=cmd_matches)
+
+    pv = sub.add_parser("verify", help="重抓核对 predictions.json 是否被站点赛前刷新")
+    pv.add_argument("--against", required=True, help="第 1 步产出的 predictions.json")
+    pv.add_argument("--update", action="store_true", help="有变化时把最新预测原位写回 --against 文件")
+    pv.set_defaults(func=cmd_verify)
 
     args = ap.parse_args()
     args.func(args)
