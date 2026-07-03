@@ -2,8 +2,44 @@
   "date": "2026-07-02",
   "weekday": "周四",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-07-02-t1",
+      "tier": "自选",
+      "type": "三串一混合过关 · 复式8注 (西2×葡2×瑞2)",
+      "legs": [
+        {
+          "text": "西班牙 vs 奥地利 [2:0 / 3球]",
+          "odds": null,
+          "hit": true,
+          "home": "西班牙",
+          "away": "奥地利"
+        },
+        {
+          "text": "葡萄牙 vs 克罗地亚 [1:1 / 3球]",
+          "odds": null,
+          "hit": true,
+          "home": "葡萄牙",
+          "away": "克罗地亚"
+        },
+        {
+          "text": "瑞士 vs 阿尔及利亚 [3球 / 2球]",
+          "odds": null,
+          "hit": true,
+          "home": "瑞士",
+          "away": "阿尔及利亚"
+        }
+      ],
+      "stake": 16.0,
+      "combinedOdds": 0,
+      "status": "win",
+      "payout": 62.4,
+      "profit": 46.4,
+      "combos": 8
+    }
+  ],
+  "dayProfit": 46.4,
+  "dayStake": 16.0,
+  "summary": "三串一混合过关复式(8注¥16)。常规时间终场:西班牙3-0奥地利、葡萄牙2-1克罗地亚、瑞士2-0阿尔及利亚,均90分钟内分胜负无加时。西班牙3球(总3)+葡萄牙3球(总3)+瑞士2球(总2)三腿同中的那1注命中,单注回款2×3.2×3.25×3=62.4 → 8注中1注,盈利+46.4。"
 }

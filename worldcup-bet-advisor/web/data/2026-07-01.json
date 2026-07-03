@@ -2,8 +2,44 @@
   "date": "2026-07-01",
   "weekday": "周三",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-07-01-t1",
+      "tier": "自选",
+      "type": "三串一混合过关 · 复式27注 (英3×比3×美3)",
+      "legs": [
+        {
+          "text": "英格兰 vs 刚果金 [1:0 / 2球 / 3球]",
+          "odds": null,
+          "hit": true,
+          "home": "英格兰",
+          "away": "刚果金"
+        },
+        {
+          "text": "比利时 vs 塞内加尔 [1球 / 3球 / 2球]",
+          "odds": null,
+          "hit": false,
+          "home": "比利时",
+          "away": "塞内加尔"
+        },
+        {
+          "text": "美国 vs 波黑 [3:1 / 2:0 / 3球]",
+          "odds": null,
+          "hit": true,
+          "home": "美国",
+          "away": "波黑"
+        }
+      ],
+      "stake": 54.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -54.0,
+      "combos": 27
+    }
+  ],
+  "dayProfit": -54.0,
+  "dayStake": 54.0,
+  "summary": "三串一混合过关复式(27注¥54)。常规时间终场:英格兰2-1刚果金、比利时2-2塞内加尔(加时3-2不计)、美国2-0波黑。英格兰命中3球、美国命中2:0——但比利时常规2-2共4球,所选1/2/3球无一命中,一腿断链拖垮全部27注 → 颗粒无收 -54。"
 }
