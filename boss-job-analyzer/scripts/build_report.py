@@ -14,7 +14,6 @@ import argparse
 import datetime
 import html
 import json
-import math
 import re
 import statistics
 import sys
@@ -315,12 +314,19 @@ def salary_stats(jobs):
             annual.append(aw)
     if not monthly:
         return None
+    if len(monthly) >= 4:
+        q = statistics.quantiles(monthly, n=4)
+        p25, p75 = round(q[0], 1), round(q[2], 1)
+    else:
+        p25, p75 = min(monthly), max(monthly)
     return {
         "n": len(monthly),
         "median_monthly": round(statistics.median(monthly), 1),
         "median_annual": round(statistics.median(annual), 1),
         "min_monthly": min(monthly),
         "max_monthly": max(monthly),
+        "p25": p25,
+        "p75": p75,
         "monthly_values": monthly,
     }
 
@@ -339,7 +345,7 @@ def salary_histogram(values):
 
 
 def salary_by_experience(jobs):
-    """返回 [(经验档, 月薪中位K, 样本数)],按经验从浅到深。"""
+    """返回 [(经验档, 最低K, 月薪中位K, 最高K, 样本数)],按经验从浅到深。"""
     buckets = {}
     for j in jobs:
         mm, _ = parse_salary(j.get("salary_raw", ""))
@@ -348,7 +354,9 @@ def salary_by_experience(jobs):
     rows = []
     for exp in EXP_ORDER:
         if exp in buckets:
-            rows.append((exp, round(statistics.median(buckets[exp]), 1), len(buckets[exp])))
+            vals = buckets[exp]
+            rows.append((exp, min(vals), round(statistics.median(vals), 1),
+                         max(vals), len(vals)))
     return rows
 
 
@@ -531,8 +539,9 @@ def color(i):
     return PALETTE[i % len(PALETTE)]
 
 
-def bar_rows(items, total, rank=False):
-    """单系列横向条形图。items=[(label, count)]。rank=True 时高亮数值最大的一行。"""
+def bar_rows(items, total, rank=False, alt=False):
+    """单系列横向条形图。items=[(label, count)]。rank=True 时高亮数值最大的一行;
+    alt=True 用第二强调色(橄榄绿),避免整份报告一水陶土橙。"""
     if not items:
         return "<p class='muted'>无数据</p>"
     mx = max(v for _, v in items) or 1
@@ -550,25 +559,8 @@ def bar_rows(items, total, rank=False):
             f"<span class='bar-num'>{v}<i>{pct:.0f}%</i></span>"
             f"</div>"
         )
-    return "<div class='bars'>" + "".join(out) + "</div>"
-
-
-def value_bars(items, unit=""):
-    """按数值(非计数)画条形图,items=[(label, value)]。用于薪资×经验这种。"""
-    if not items:
-        return "<p class='muted'>无数据</p>"
-    mx = max(v for _, v in items) or 1
-    out = []
-    for i, (label, v) in enumerate(items):
-        w = v / mx * 100
-        delay = 0.15 + i * 0.06
-        out.append(
-            f"<div class='bar' data-tip='{esc(label)}: {v:g}{unit}'>"
-            f"<span class='bar-label'>{esc(label)}</span>"
-            f"<span class='bar-track'><span class='bar-fill' style='--w:{w:.1f}%;animation-delay:{delay:.2f}s'></span></span>"
-            f"<span class='bar-num'>{v:g}{unit}</span></div>"
-        )
-    return "<div class='bars'>" + "".join(out) + "</div>"
+    wrap = "bars alt" if alt else "bars"
+    return f"<div class='{wrap}'>" + "".join(out) + "</div>"
 
 
 def callout(html_text):
@@ -613,113 +605,70 @@ def legend(groups, totals):
     return "<div class='legend'>" + "".join(items) + "</div>"
 
 
-def wordcloud(counter):
-    if not counter:
-        return "<p class='muted'>无数据</p>"
-    mx = max(counter.values())
-    spans = []
-    for name, v in counter.most_common(30):
-        r = v / mx
-        size = 15 + r * 27
-        opacity = 0.5 + r * 0.5
-        weight = 600 if r > 0.5 else 500
-        spans.append(
-            f"<span class='w' style='font-size:{size:.0f}px;opacity:{opacity:.2f};font-weight:{weight}' "
-            f"data-tip='{v} 个岗位'>{esc(name)}</span>"
-        )
-    return "<div class='cloud'>" + " ".join(spans) + "</div>"
-
-
-def donut_chart(items, total, center_label="岗位"):
+def strip_chart(items, total):
+    """100% 堆叠横条 + 内联图例。适合互斥分类(学历/经验各岗只占一档),
+    一眼看出构成,比一人一图的甜甜圈/条形紧凑得多。items=[(label, count)]。"""
     if not items or not total:
         return "<p class='muted'>无数据</p>"
-    colors = ["#C15F3C", "#7D7A5C", "#CC9B7A", "#9C6B4F", "#A8704F",
-              "#6E6A50", "#B8856A", "#8A8570", "#D4A88C", "#7A7568"]
-    items = items[:8]
-    shown = sum(v for _, v in items)
-    # 多标签数据(如一岗多语言)的岗位占比和会超 100%,conic-gradient 超出 100% 的段
-    # 会被整段截掉(图例有、轮盘没有)。超界时轮盘改按"提及份额"画,图例仍标岗位占比。
-    base = shown if shown > total else total
-    segments, legs = [], []
-    acc = 0
+    segs, legs = [], []
     for i, (label, v) in enumerate(items):
-        p_wheel = v / base * 100
-        p_jobs = v / total * 100
-        c = colors[i % len(colors)]
-        segments.append(f"{c} {acc:.1f}% {acc + p_wheel:.1f}%")
-        acc += p_wheel
+        p = v / total * 100
+        c = color(i)
+        segs.append(
+            f"<span class='strip-seg' style='width:{p:.2f}%;background:{c}' "
+            f"data-tip='{esc(label)}: {v}/{total} ({p:.0f}%)'></span>")
         legs.append(
-            f"<div class='donut-leg'><i style='background:{c}'></i>"
-            f"<span class='donut-name'>{esc(label)}</span>"
-            f"<span class='donut-val'>{v} <em>{p_jobs:.0f}%</em></span></div>")
-    if acc < 100:
-        segments.append(f"var(--well) {acc:.1f}% 100%")
-    grad = ",".join(segments)
-    return (
-        f"<div class='donut-wrap'>"
-        f"<div class='donut' style='background:conic-gradient({grad})'>"
-        f"<div class='donut-hole'><span class='donut-total'>{total}</span>"
-        f"<span class='donut-cap'>{esc(center_label)}</span></div></div>"
-        f"<div class='donut-legend'>{''.join(legs)}</div></div>")
+            f"<span class='strip-leg'><i style='background:{c}'></i>"
+            f"{esc(label)} <b>{p:.0f}%</b></span>")
+    return (f"<div class='strip-wrap'><div class='strip'>{''.join(segs)}</div>"
+            f"<div class='strip-legend'>{''.join(legs)}</div></div>")
 
 
-def column_chart(items, unit="", total=0):
+def range_rows(rows, unit="K"):
+    """区间点图(dumbbell):每行画 最低—最高 的区间带 + 中位数圆点。
+    比只画中位数的条形多传达"离散程度",且不会被单个高薪岗位带偏观感。
+    rows=[(label, lo, mid, hi, n)]。"""
+    if not rows:
+        return "<p class='muted'>无数据</p>"
+    g_lo = min(r[1] for r in rows)
+    g_hi = max(r[3] for r in rows)
+    span = (g_hi - g_lo) or 1
+    pos = lambda v: (v - g_lo) / span * 100
+    out = []
+    for label, lo, mid, hi, n in rows:
+        left, width = pos(lo), max(pos(hi) - pos(lo), 1.5)
+        tip = f"{label}: 中位 {mid:g}{unit},区间 {lo:g}–{hi:g}{unit},样本 {n}"
+        out.append(
+            f"<div class='range-row' data-tip='{esc(tip)}'>"
+            f"<span class='bar-label'>{esc(label)}</span>"
+            f"<span class='range-track'>"
+            f"<span class='range-band' style='left:{left:.1f}%;width:{width:.1f}%'></span>"
+            f"<span class='range-dot' style='left:{pos(mid):.1f}%'></span>"
+            f"</span>"
+            f"<span class='bar-num'>{mid:g}{unit}<i>中位</i></span>"
+            f"</div>")
+    axis = (f"<div class='range-axis'><span>{g_lo:g}{unit}</span>"
+            f"<span>{g_hi:g}{unit}</span></div>")
+    return "<div class='ranges'>" + "".join(out) + axis + "</div>"
+
+
+def column_chart(items, unit="", total=0, hl=None):
+    """竖向柱状图。hl 传入要高亮的柱下标(如中位数所在的薪资档)。"""
     if not items:
         return "<p class='muted'>无数据</p>"
     mx = max(v for _, v in items) or 1
     cols = []
     for i, (label, v) in enumerate(items):
-        h = max(v / mx * 100, 2)
+        h = max(v / mx * 100, 2) if v else 0
         pct_s = f" ({v/total*100:.0f}%)" if total else ""
         delay = 0.15 + i * 0.06
+        cls = "col hl" if i == hl else "col"
         cols.append(
-            f"<div class='col' data-tip='{esc(label)}: {v}{unit}{pct_s}'>"
+            f"<div class='{cls}' data-tip='{esc(label)}: {v}{unit}{pct_s}'>"
             f"<span class='col-val'>{v}{unit}</span>"
             f"<div class='col-track'><div class='col-fill' style='--h:{h:.1f}%;animation-delay:{delay:.2f}s'></div></div>"
             f"<span class='col-label'>{esc(label)}</span></div>")
     return "<div class='columns'>" + "".join(cols) + "</div>"
-
-
-def radar_chart(items, total, size=280):
-    items = items[:6]
-    if len(items) < 3:
-        return ""
-    n = len(items)
-    cx, cy = size / 2, size / 2
-    r = size * 0.34
-    angles = [i * 2 * math.pi / n - math.pi / 2 for i in range(n)]
-    rings_html = ""
-    for frac in [0.25, 0.5, 0.75, 1.0]:
-        pts = " ".join(f"{cx + r * frac * math.cos(a):.1f},{cy + r * frac * math.sin(a):.1f}" for a in angles)
-        rings_html += f"<polygon points='{pts}' class='radar-ring'/>"
-    axes_html = "".join(
-        f"<line x1='{cx}' y1='{cy}' x2='{cx + r * math.cos(a):.1f}' y2='{cy + r * math.sin(a):.1f}' class='radar-axis'/>"
-        for a in angles)
-    data_pts = []
-    for i, (_, v) in enumerate(items):
-        ratio = min(v / total, 1.0) if total else 0
-        data_pts.append(f"{cx + r * ratio * math.cos(angles[i]):.1f},{cy + r * ratio * math.sin(angles[i]):.1f}")
-    dots = "".join(f"<circle cx='{p.split(',')[0]}' cy='{p.split(',')[1]}' r='4' class='radar-dot'/>" for p in data_pts)
-    labels_html = ""
-    for i, (label, v) in enumerate(items):
-        lx = cx + (r + 30) * math.cos(angles[i])
-        ly = cy + (r + 30) * math.sin(angles[i])
-        anchor = "middle"
-        if math.cos(angles[i]) > 0.3: anchor = "start"
-        elif math.cos(angles[i]) < -0.3: anchor = "end"
-        pct_v = v / total * 100 if total else 0
-        labels_html += (
-            f"<text x='{lx:.1f}' y='{ly:.1f}' text-anchor='{anchor}' "
-            f"dominant-baseline='central' class='radar-label'>"
-            f"{esc(label)} <tspan class='radar-pct'>{pct_v:.0f}%</tspan></text>")
-    pts_str = " ".join(data_pts)
-    return (
-        f"<div class='radar-wrap'>"
-        f"<svg class='radar-svg' viewBox='0 0 {size} {size}'>"
-        f"{rings_html}{axes_html}"
-        f"<polygon points='{pts_str}' class='radar-fill'/>"
-        f"<polygon points='{pts_str}' class='radar-stroke'/>"
-        f"{dots}{labels_html}</svg></div>")
 
 
 def pill_cloud(items, total):
@@ -878,7 +827,11 @@ def build_html(jobs, analysis_path=None, insights_path=None):
     fmt = lambda x: f"{x:g}"
     sections = []  # (num, title, subtitle, inner)
 
-    # ---- 概览 ----
+    # ---- 概览:数字一次说完 + 一条行动建议 ----
+    # 不再单设"总结分析"节:它的每一行都是下面各维度 callout 的复读,
+    # 同一个中位数在报告里出现四次只会稀释注意力。数字只在这里出现一次。
+    n_active = sum(1 for j in jobs if re.search(r"活跃|回复|在线|刚刚|今日|本周|分钟|小时",
+                                                j.get("hr_active") or ""))
     figs = [f"<div class='figure'><div class='num'>{total}</div><div class='cap'>在招岗位</div></div>"]
     if multi:
         figs.append(f"<div class='figure'><div class='num'>{len(groups)}</div>"
@@ -886,100 +839,70 @@ def build_html(jobs, analysis_path=None, insights_path=None):
     if sstat:
         figs.append(f"<div class='figure'><div class='num'>{fmt(sstat['median_monthly'])}<em>K</em></div>"
                     f"<div class='cap'>月薪中位数</div></div>")
-        figs.append(f"<div class='figure'><div class='num'>{fmt(sstat['median_annual'])}<em>万</em></div>"
-                    f"<div class='cap'>年薪中位数</div></div>")
-        figs.append(f"<div class='figure'><div class='num'>{fmt(sstat['min_monthly'])}"
-                    f"<em>–{fmt(sstat['max_monthly'])}K</em></div>"
-                    f"<div class='cap'>月薪区间</div></div>")
+        figs.append(f"<div class='figure'><div class='num'>{fmt(sstat['p25'])}<em>–{fmt(sstat['p75'])}K</em></div>"
+                    f"<div class='cap'>主流月薪(中间50%)</div></div>")
+    if n_active:
+        figs.append(f"<div class='figure'><div class='num'>{n_active}</div>"
+                    f"<div class='cap'>HR 近期活跃</div></div>")
     overview = "<div class='stats'>" + "".join(figs) + "</div>"
-    overview += "<div class='chips'>" + "".join(
-        f"<span class='chip'>{esc(g)} <b>{totals[g]}</b></span>" for g in groups) + "</div>"
+    if multi:
+        overview += "<div class='chips'>" + "".join(
+            f"<span class='chip'>{esc(g)} <b>{totals[g]}</b></span>" for g in groups) + "</div>"
+    advice = []
+    must = [esc(n) for n, v in tech_all.most_common(3) if v / total > 0.3]
+    if must:
+        advice.append("优先掌握 " + "、".join(f"<b>{m}</b>" for m in must))
+    top_lang = lang_all.most_common(1)
+    if top_lang:
+        advice.append(f"语言首选 <b>{esc(top_lang[0][0])}</b>")
+    top_bonus = bonus_all.most_common(1)
+    if top_bonus:
+        clean = re.sub(r"^[0-9]+[、.．,，:：)\]】]\s*", "", top_bonus[0][0])
+        short = clean[:22] + ("…" if len(clean) > 22 else "")
+        advice.append(f"差异化方向关注「{esc(short)}」")
+    if advice:
+        overview += callout("给求职者：" + "；".join(advice) + "。")
     sections.append(("", "概览", None, overview))
 
-    # ---- 总结分析 ----
-    sum_items = []
-    advice = []
-    top5 = tech_all.most_common(5)
-    if top5:
-        sum_items.append(("核心技术栈",
-            "、".join(f"<b>{esc(n)}</b>({pct(v, total)})" for n, v in top5)))
-        must = [esc(n) for n, v in top5[:3] if v / total > 0.3]
-        if must:
-            advice.append("优先掌握 " + "、".join(f"<b>{m}</b>" for m in must))
-    top_lang = lang_all.most_common(3)
-    if top_lang:
-        sum_items.append(("主流语言",
-            "、".join(f"<b>{esc(n)}</b>({pct(v, total)})" for n, v in top_lang)))
-        advice.append(f"语言首选 <b>{esc(top_lang[0][0])}</b>")
-    s_exp = dist(jobs, lambda j: norm_experience(j.get("experience")), EXP_ORDER)
-    s_edu = dist(jobs, lambda j: norm_education(j.get("education")), EDU_ORDER)
-    if s_exp:
-        te = max(s_exp, key=lambda x: x[1])
-        sum_items.append(("经验门槛", f"<b>{esc(te[0])}</b> 为主({pct(te[1], total)})"))
-    if s_edu:
-        td = max(s_edu, key=lambda x: x[1])
-        sum_items.append(("学历要求", f"<b>{esc(td[0])}</b> 为主({pct(td[1], total)})"))
-    if sstat:
-        sum_items.append(("薪资水平",
-            f"月薪 <b>{fmt(sstat['min_monthly'])}–{fmt(sstat['max_monthly'])}K</b>"
-            f",中位 <b>{fmt(sstat['median_monthly'])}K</b>"))
-    top_bonus = bonus_all.most_common(3)
-    if top_bonus:
-        sum_items.append(("差异化加分",
-            "、".join(f"<b>{esc(n)}</b>" for n, _ in top_bonus)))
-        advice.append(f"差异化方向关注「{esc(top_bonus[0][0])}」")
-    sum_inner = ""
-    if advice:
-        sum_inner += callout("学习建议：" + "；".join(advice) + "。")
-    sum_inner += "<div class='sum-grid'>" + "".join(
-        f"<div class='sum-row'><div class='sum-label'>{k}</div>"
-        f"<div class='sum-val'>{v}</div></div>"
-        for k, v in sum_items) + "</div>"
-    sections.append(("✦", "总结分析", "从招聘数据中提炼的市场洞察与学习方向", sum_inner))
-
-    # ---- 维度1:技术栈 ----
+    # ---- 01 技术栈与编程语言 ----
+    # 合并为一节:两者回答的是同一个问题("要会什么"),拆开只是把读者的滚动翻倍。
+    # 榜单只画一遍(条形图):同一份计数以前画了雷达+条形+词云三遍,后两者不增加信息。
+    # 语言不用甜甜圈:一岗常要求多门语言,占比和超 100%,饼形天然误导。
     top3 = tech_all.most_common(3)
     if top3:
         items = "、".join(f"<b>{esc(n)}</b>({pct(v, total)})" for n, v in top3)
         tip = callout(f"{total} 个岗位里,被点名最多的是 {items}。这些是该岗位的核心技术底色。")
     else:
         tip = ""
-    radar_html = radar_chart(tech_all.most_common(6), total)
     if multi:
         data = {}
-        union = [name for name, _ in tech_all.most_common(18)]
+        union = [name for name, _ in tech_all.most_common(14)]
         for g in groups:
             gc = tech_freq(by_group[g])
             for name in union:
                 data.setdefault(name, {})[g] = gc.get(name, 0)
-        inner = tip + radar_html + legend(groups, totals) + grouped_bar_rows(union, groups, data, totals)
+        inner = tip + legend(groups, totals) + grouped_bar_rows(union, groups, data, totals)
     else:
-        inner = tip + radar_html + "<h3>完整技术栈排名</h3>" + bar_rows(tech_all.most_common(18), total, rank=True)
-    inner += "<h3>技术词云</h3>" + wordcloud(tech_all)
-    co_pairs = tag_cooccurrence(jobs, by_url) if use_claude else cooccurrence(jobs, TECH_TERMS)
-    if co_pairs:
-        inner += "<h3>常见技能组合</h3>" + cooccur_grid(co_pairs)
-    sections.append(("01", "技术栈 / 智能体框架",
-                     "数值 = 提到该技术的岗位占比(文档频率)", inner))
-
-    # ---- 维度2:编程语言 ----
-    lang_items = lang_all.most_common(8)
-    lang_donut = donut_chart(lang_items, total, center_label="岗位")
+        inner = tip + bar_rows(tech_all.most_common(14), total, rank=True)
     if multi:
         data = {}
-        union = [name for name, _ in lang_all.most_common(12)]
+        union = [name for name, _ in lang_all.most_common(8)]
         for g in groups:
             gc = lang_freq(by_group[g])
             for name in union:
                 data.setdefault(name, {})[g] = gc.get(name, 0)
-        inner = lang_donut + "<h3>分关键词对比</h3>" + legend(groups, totals) + grouped_bar_rows(union, groups, data, totals)
+        inner += "<h3>编程语言</h3>" + grouped_bar_rows(union, groups, data, totals)
     else:
-        topl = lang_all.most_common(1)
-        ltip = callout(f"<b>{esc(topl[0][0])}</b> 是硬通货,{pct(topl[0][1], total)} 的岗位都要求。") if topl else ""
-        inner = ltip + lang_donut
-    sections.append(("02", "编程语言要求占比", None, inner))
+        inner += "<h3>编程语言</h3>" + bar_rows(lang_all.most_common(8), total, alt=True)
+    co_pairs = tag_cooccurrence(jobs, by_url) if use_claude else cooccurrence(jobs, TECH_TERMS)
+    if co_pairs:
+        inner += "<h3>常见技能组合</h3>" + cooccur_grid(co_pairs)
+    sections.append(("01", "技术栈与编程语言",
+                     "占比 = 提到该项的岗位数 ÷ 样本数,一岗可命中多项", inner))
 
-    # ---- 维度3:硬性要求 + 薪资 ----
+    # ---- 02 门槛与薪资 ----
+    # 学历/经验是互斥分类(每岗只占一档),用 100% 堆叠条最紧凑;
+    # 薪资×经验升级为区间点图:光画中位数会把"3-5年 20-60K"这种大离散抹平。
     edu_dist = dist(jobs, lambda j: norm_education(j.get("education")), EDU_ORDER)
     exp_dist = dist(jobs, lambda j: norm_experience(j.get("experience")), EXP_ORDER)
     bits = []
@@ -994,14 +917,14 @@ def build_html(jobs, analysis_path=None, insights_path=None):
         tb = max(hist, key=lambda x: x[1])
         bits.append(f"月薪集中在 <b>{tb[0]}</b>,中位 <b>{sstat['median_monthly']:g}K</b>")
     hard_tip = callout("、".join(bits) + "。") if bits else ""
-    edu_html = "<h3>学历要求</h3>" + donut_chart(edu_dist, total, center_label="岗位")
-    exp_html = "<h3>工作年限</h3>" + bar_rows(exp_dist, total)
+    edu_html = "<h3>学历要求</h3>" + strip_chart(edu_dist, total)
+    exp_html = "<h3>工作年限</h3>" + strip_chart(exp_dist, total)
     if sstat:
         hist = salary_histogram(sstat["monthly_values"])
-        sal_html = "<h3>薪资分布(按月薪中点)</h3>" + column_chart(hist, total=sstat["n"])
-        sal_html += (f"<p class='muted'>月薪中位 {fmt(sstat['median_monthly'])}K,"
-                     f"区间 {fmt(sstat['min_monthly'])}–{fmt(sstat['max_monthly'])}K,"
-                     f"可解析样本 {sstat['n']}/{total}</p>")
+        mv = sstat["median_monthly"]
+        hl_idx = 0 if mv < 10 else 1 if mv < 20 else 2 if mv < 30 else 3 if mv < 40 else 4 if mv < 50 else 5
+        sal_html = ("<h3>薪资分布(高亮柱 = 中位数所在档)</h3>"
+                    + column_chart(hist, total=sstat["n"], hl=hl_idx))
         if multi:
             rows = []
             for g in groups:
@@ -1016,44 +939,49 @@ def build_html(jobs, analysis_path=None, insights_path=None):
     else:
         sal_html = "<h3>薪资分布</h3><p class='muted'>无可解析薪资</p>"
     sxp = salary_by_experience(jobs)
-    sxp_html = ("<h3>薪资 × 经验(各档月薪中位)</h3>" +
-                value_bars([(e, m) for e, m, _ in sxp], "K")) if len(sxp) >= 2 else ""
-    sections.append(("03", "硬性要求 + 薪资分布", None,
+    sxp_html = ("<h3>薪资 × 经验(区间与中位)</h3>" + range_rows(sxp)) if len(sxp) >= 2 else ""
+    sub02 = (f"薪资口径:月薪区间中点 · 可解析样本 {sstat['n']}/{total}" if sstat else None)
+    sections.append(("02", "门槛与薪资", sub02,
                      hard_tip + edu_html + exp_html + sal_html + sxp_html))
 
-    # ---- 维度4:加分项 + 职责高频词 ----
+    # ---- 03 职责与加分项 ----
     n_bonus = sum(1 for j in jobs if (j.get("bonus_raw") or "").strip())
     td = duty_all.most_common(3)
     dbits = []
     if td:
-        dbits.append("职责高频词是 " + "、".join(f"<b>{esc(n)}</b>" for n, _ in td))
+        dbits.append("职责围绕 " + "、".join(f"<b>{esc(n)}</b>" for n, _ in td) + " 展开")
     if n_bonus:
-        dbits.append(f"{n_bonus}/{total} 个岗位写明了加分项")
+        dbits.append(f"{n_bonus}/{total} 个岗位写明加分项——投递前逐条对照,是低成本的差异化机会")
     duty_tip = callout("、".join(dbits) + "。") if dbits else ""
     duty_html = "<h3>高频职责关键词</h3>" + pill_cloud(duty_all.most_common(15), total)
-    if bonus_all:
-        bonus_html = "<h3>高频加分项 / 优先项</h3>" + bonus_grid(bonus_all.most_common(20))
+    # 加分项大多是一次性长尾:高频的平铺,只出现一次的折叠,避免 20 张卡片的视觉噪音。
+    b_items = bonus_all.most_common(60)
+    common_b = [(t, c) for t, c in b_items if c >= 2]
+    rare_b = [(t, c) for t, c in b_items if c == 1]
+    if common_b:
+        bonus_html = "<h3>高频加分项 / 优先项</h3>" + bonus_grid(common_b)
+        rest_b = rare_b[:24]
+    elif rare_b:
+        bonus_html = "<h3>加分项 / 优先项</h3>" + bonus_grid(rare_b[:8])
+        rest_b = rare_b[8:32]
     else:
         bonus_html = "<h3>加分项</h3><p class='muted'>未抓到明确的加分项</p>"
-    sections.append(("04", "加分项 + 高频职责关键词", None, duty_tip + duty_html + bonus_html))
+        rest_b = []
+    if rest_b:
+        bonus_html += (f"<details class='bonus-more'><summary>展开其余 {len(rest_b)} 条"
+                       f"仅单个岗位提到的加分项</summary>" + bonus_grid(rest_b) + "</details>")
+    sections.append(("03", "职责与加分项", None, duty_tip + duty_html + bonus_html))
 
-    # ---- 维度5:市场规律洞察 ----
+    # ---- 04 市场规律洞察(卡片自带标题+覆盖率,不再加一条复述第一张卡的 callout) ----
     insights = analysis_insights or mine_insights(jobs, insights_path=insights_path)
     if insights:
-        top_ins = insights[0]
-        ins_tip = callout(
-            f"最显著的规律:<b>{esc(top_ins[0])}</b> — "
-            f"{top_ins[2]:.0f}% 的岗位涉及。以下洞察按覆盖率降序排列。")
-        ins_html = ins_tip + insight_cards(insights)
+        ins_html = insight_cards(insights)
     else:
         ins_html = "<p class='muted'>样本量不足,暂无显著规律</p>"
-    sections.append(("05", "市场规律洞察",
-                     f"从 {total} 个岗位 JD 中自动提炼的跨岗位共性模式", ins_html))
+    sections.append(("04", "市场规律洞察",
+                     f"从 {total} 个岗位 JD 中提炼的跨岗位共性模式,按覆盖率降序", ins_html))
 
     # ---- 岗位卡片墙 ----
-    n_active = sum(1 for j in jobs if re.search(r"活跃|回复|在线|刚刚|今日|本周|分钟|小时",
-                                                j.get("hr_active") or ""))
-
     edu_set = sorted({norm_education(j.get("education")) for j in jobs})
     exp_set = sorted({norm_experience(j.get("experience")) for j in jobs},
                      key=lambda x: EXP_ORDER.index(x) if x in EXP_ORDER else 99)
@@ -1075,8 +1003,6 @@ def build_html(jobs, analysis_path=None, insights_path=None):
     )
 
     wall = [controls]
-    if n_active:
-        wall.append(callout(f"<b>{n_active}/{total}</b> 个岗位的 HR 近期活跃(卡片上有 ● 标记),投递优先看这些。"))
     for g in groups:
         if multi:
             wall.append(f"<h3 class='wall-group'>{esc(g)} <span class='muted'>{totals[g]} 个</span></h3>")
@@ -1086,7 +1012,7 @@ def build_html(jobs, analysis_path=None, insights_path=None):
         wall.append("</div>")
     num_wall = f"{sum(s[0][:1].isdigit() for s in sections) + 1:02d}"
     sections.append((num_wall, "岗位卡片墙",
-                     "点击任意卡片展开该岗位在 BOSS 上的原始职责与要求", "".join(wall)))
+                     "点击卡片展开该岗位在 BOSS 上的原始职责与要求 · ● = HR 近期活跃", "".join(wall)))
 
     # ---- 组装 ----
     body = "".join(section_block(num, t, sub, inner, i)
@@ -1125,8 +1051,7 @@ def build_html(jobs, analysis_path=None, insights_path=None):
         "<div class='kicker'>人才市场需求分析</div>"
         f"<h1 class='headline'>{esc(kw_label)}</h1>"
         f"<p class='standfirst'>基于 {total} 个真实在招岗位,拆解技术栈、薪资与硬性要求。</p>"
-        f"<p class='standfirst' style='font-size:14px;color:var(--muted);margin-top:-12px'>数据来源：BOSS直聘</p>"
-        f"<div class='byline'>{today} · 数据源 jobs.json · 样本 {total} 个</div>"
+        f"<div class='byline'>{today} · 数据来源 BOSS直聘</div>"
         "</header>"
     )
     title = "人才市场需求分析 · " + kw_label
@@ -1155,6 +1080,7 @@ HTML_SHELL = r"""<!DOCTYPE html>
   --ink:#1A1813;--ink-2:#46423A;--muted:#8C867A;
   --line:#DDD8CB;--line-2:#C8C2B2;
   --clay:#C15F3C;--clay-deep:#A8492B;--clay-2:#D98E6A;--clay-soft:#E2BBA6;
+  --accent2:#7D7A5C;--accent2-2:#A8A47E;
   --callout-bg:linear-gradient(180deg,#FBF3EC,var(--surface));
   --job-open-bg:#FBFAF5;--shadow-card:rgba(80,45,25,.45);
   --sans:"Inter",-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Noto Sans SC","HarmonyOS Sans SC","Microsoft YaHei",Arial,sans-serif;
@@ -1165,6 +1091,7 @@ HTML_SHELL = r"""<!DOCTYPE html>
   --ink:#E8E6E0;--ink-2:#B8B5AC;--muted:#76736A;
   --line:#3A3A42;--line-2:#4A4A52;
   --clay:#E07850;--clay-deep:#F09070;--clay-2:#C06840;--clay-soft:rgba(224,120,80,.2);
+  --accent2:#9C987A;--accent2-2:#7A7660;
   --callout-bg:linear-gradient(180deg,#2A2420,var(--surface));
   --job-open-bg:#28282E;--shadow-card:rgba(0,0,0,.6);
 }
@@ -1186,12 +1113,6 @@ body{margin:0;color:var(--ink);background:var(--paper);font-family:var(--sans);f
 .block-num{font-family:var(--num);font-size:15px;color:var(--clay);font-weight:600;font-feature-settings:"tnum"}
 .block h2{font-family:var(--sans);font-weight:600;font-size:25px;letter-spacing:0;margin:0;color:var(--ink)}
 .block-sub{color:var(--muted);font-size:14px;margin:0 0 24px}
-.sum-grid{margin:8px 0 0}
-.sum-row{display:flex;gap:16px;padding:13px 0;border-bottom:1px solid var(--line)}
-.sum-row:last-child{border-bottom:none}
-.sum-label{flex:0 0 100px;font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.03em;padding-top:1px}
-.sum-val{flex:1;font-size:14.5px;color:var(--ink-2);line-height:1.7}
-.sum-val b{color:var(--clay-deep);font-weight:600}
 .block h3{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--clay-deep);font-weight:600;margin:30px 0 15px}
 .muted{color:var(--muted)}
 .callout{display:flex;gap:12px;align-items:flex-start;background:var(--callout-bg);border:1px solid var(--clay-soft);border-left:3px solid var(--clay);border-radius:12px;padding:15px 18px;margin:0 0 24px}
@@ -1221,6 +1142,29 @@ body{margin:0;color:var(--ink);background:var(--paper);font-family:var(--sans);f
 .bar.top .bar-label{color:var(--ink);font-weight:600}
 .bar.top .bar-fill{background:linear-gradient(90deg,var(--clay-deep),var(--clay))}
 .bar.top .bar-track{box-shadow:0 0 0 1px var(--clay-soft)}
+.bars.alt .bar-fill{background:linear-gradient(90deg,var(--accent2),var(--accent2-2))}
+.bars.alt .bar.top .bar-fill{background:linear-gradient(90deg,var(--accent2),var(--accent2-2))}
+.strip-wrap{margin:4px 0 8px}
+.strip{display:flex;height:30px;border-radius:9px;overflow:hidden;background:var(--well)}
+.strip-seg{display:block;height:100%;min-width:3px;transition:filter .15s;animation:seg-in .8s cubic-bezier(.2,.8,.2,1) both}
+.strip-seg:hover{filter:brightness(1.15)}
+.strip-seg+.strip-seg{border-left:2px solid var(--paper)}
+.strip-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:11px}
+.strip-leg{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.strip-leg i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px}
+.strip-leg b{color:var(--ink);font-weight:600;font-feature-settings:"tnum"}
+.ranges{display:flex;flex-direction:column;gap:10px;margin:6px 0}
+.range-row{display:flex;align-items:center;gap:14px;padding:3px 6px;margin:-3px -6px;border-radius:8px;transition:background .15s;cursor:default}
+.range-row:hover{background:var(--well)}
+.range-track{flex:1;position:relative;height:22px;border-radius:6px;background:repeating-linear-gradient(90deg,var(--well) 0,var(--well) 1px,transparent 1px,transparent 25%)}
+.range-band{position:absolute;top:8px;height:6px;border-radius:3px;background:var(--clay-soft);animation:seg-in .9s cubic-bezier(.2,.8,.2,1) both}
+.range-dot{position:absolute;top:4px;width:14px;height:14px;border-radius:50%;background:var(--clay);border:2.5px solid var(--surface);transform:translateX(-50%);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.range-axis{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:2px 98px 0 170px;font-feature-settings:"tnum"}
+@keyframes seg-in{from{opacity:0}to{opacity:1}}
+.bonus-more{margin-top:14px}
+.bonus-more summary{cursor:pointer;font-size:13px;color:var(--muted);padding:6px 0;user-select:none}
+.bonus-more summary:hover{color:var(--clay)}
+.bonus-more[open] summary{margin-bottom:10px}
 .gb-row{display:flex;align-items:flex-start;gap:14px;margin:11px 0}
 .gb-bars{flex:1;display:flex;flex-direction:column;gap:6px}
 .gb-item{display:flex;align-items:center;gap:10px}
@@ -1230,12 +1174,6 @@ body{margin:0;color:var(--ink);background:var(--paper);font-family:var(--sans);f
 .legend{display:flex;flex-wrap:wrap;gap:18px;margin:4px 0 18px}
 .lg{font-size:13px;color:var(--ink-2)}
 .lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
-.cloud{line-height:2.5;margin-top:4px}
-.w{display:inline-block;margin:3px 14px 3px 0;color:var(--clay);font-family:var(--sans);vertical-align:middle}
-.bonus{list-style:none;margin:4px 0 0;padding:0;columns:2;column-gap:36px}
-.bonus li{break-inside:avoid;padding:8px 0 8px 18px;position:relative;font-size:14px;color:var(--ink-2);border-bottom:1px solid var(--line)}
-.bonus li::before{content:"";position:absolute;left:0;top:16px;width:6px;height:6px;border-radius:50%;background:var(--clay-soft)}
-.bonus li span{color:var(--muted);font-size:12px}
 .bonus-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;margin-top:8px}
 .bonus-card{display:flex;align-items:baseline;gap:10px;padding:10px 14px;border-radius:8px;background:var(--well);border:1px solid var(--line);font-size:13.5px;color:var(--ink-2);border-left:3px solid transparent;transition:border-color .2s}
 .bonus-card.hot{border-left-color:var(--clay);background:var(--paper)}
@@ -1263,8 +1201,10 @@ table.cmp th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:
 .ben{font-size:11px;color:var(--ink-2);background:var(--well);padding:2px 8px;border-radius:6px}
 .hr{margin-left:9px;color:#3f7d5a;font-size:12px;font-weight:500;white-space:nowrap}
 [data-theme="dark"] .hr{color:#6cc090}
-.job-cue{display:inline-block;margin-top:13px;font-size:12px;color:var(--clay);letter-spacing:.04em}
+.job-cue{display:inline-block;margin-top:13px;font-size:12px;color:var(--clay);letter-spacing:.04em;opacity:0;transition:opacity .2s}
+.job:hover .job-cue{opacity:1}
 .job[open] .job-cue{display:none}
+@media(hover:none){.job-cue{opacity:.75}}
 .job-body{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .jd-sec{margin-bottom:15px}
 .jd-sec h4{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--clay-deep);margin:0 0 7px;font-weight:600}
@@ -1292,18 +1232,6 @@ footer b{color:var(--clay-deep);font-weight:600}
 .backtop{position:fixed;bottom:28px;right:24px;z-index:100;width:42px;height:42px;border:1px solid var(--line-2);border-radius:50%;background:var(--surface);color:var(--ink-2);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transform:translateY(10px);transition:all .3s;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .backtop.show{opacity:1;transform:none}
 .backtop:hover{border-color:var(--clay);color:var(--clay);transform:translateY(-2px)}
-.donut-wrap{display:flex;align-items:center;gap:32px;margin:16px 0 24px;flex-wrap:wrap}
-.donut{width:180px;height:180px;border-radius:50%;position:relative;flex-shrink:0;animation:donut-spin .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:.3s}
-.donut-hole{position:absolute;inset:25%;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:background .3s}
-.donut-total{font-family:var(--num);font-size:32px;font-weight:700;color:var(--ink);line-height:1}
-.donut-cap{font-size:12px;color:var(--muted);margin-top:4px}
-.donut-legend{display:flex;flex-direction:column;gap:8px;flex:1;min-width:160px}
-.donut-leg{display:flex;align-items:center;gap:10px;font-size:13.5px;padding:4px 8px;margin:-4px -8px;border-radius:6px;transition:background .15s;cursor:default}
-.donut-leg:hover{background:var(--well)}
-.donut-leg i{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-.donut-name{flex:1;color:var(--ink-2)}
-.donut-val{font-family:var(--num);color:var(--ink);font-weight:500;font-feature-settings:"tnum"}
-.donut-val em{font-style:normal;color:var(--muted);margin-left:4px;font-size:12px}
 .columns{display:flex;align-items:flex-end;gap:8px;height:200px;margin:16px 0 8px;padding:0 4px;border-bottom:1px solid var(--line)}
 .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;height:100%;cursor:default;transition:transform .15s}
 .col:hover{transform:scaleX(1.08)}
@@ -1313,16 +1241,8 @@ footer b{color:var(--clay-deep);font-weight:600}
 .col-fill{width:100%;border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--clay),var(--clay-2));height:0;animation:col-grow 1s cubic-bezier(.2,.8,.2,1) both;transition:filter .15s}
 .col-val{font-size:11px;color:var(--ink);font-weight:600;font-feature-settings:"tnum";white-space:nowrap;order:-1;transition:color .15s}
 .col-label{font-size:11px;color:var(--muted);text-align:center;line-height:1.2;padding-top:6px}
-.radar-wrap{display:flex;justify-content:center;margin:16px 0 24px}
-.radar-svg{overflow:visible;max-width:100%}
-.radar-ring{fill:none;stroke:var(--line);stroke-width:.6}
-.radar-axis{stroke:var(--line);stroke-width:.5;stroke-dasharray:3,3}
-.radar-fill{fill:rgba(193,95,60,.13);stroke:none;animation:radar-appear .8s ease both;animation-delay:.4s}
-.radar-stroke{fill:none;stroke:var(--clay);stroke-width:2;stroke-linejoin:round;animation:radar-appear .8s ease both;animation-delay:.4s}
-.radar-dot{fill:var(--clay);stroke:var(--surface);stroke-width:2.5}
-.radar-label{font-size:11.5px;fill:var(--ink-2);font-family:var(--sans)}
-.radar-pct{font-weight:600;fill:var(--clay)}
-[data-theme="dark"] .radar-fill{fill:rgba(224,120,80,.13)}
+.col.hl .col-fill{background:linear-gradient(180deg,var(--clay-deep),var(--clay))}
+.col.hl .col-val{color:var(--clay-deep)}
 .pill-cloud{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 24px}
 .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:var(--clay);color:#fff;font-size:13px;transition:transform .15s}
 .pill:hover{transform:scale(1.05)}
@@ -1348,16 +1268,14 @@ footer b{color:var(--clay-deep);font-weight:600}
 [data-tip]{position:relative}
 [data-tip]:hover::after{content:attr(data-tip);position:absolute;top:-30px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);font-size:11px;padding:3px 10px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:9;opacity:0;animation:tip-in .15s .25s forwards}
 .col[data-tip]:hover::after{top:auto;bottom:calc(100% + 4px);left:50%}
-.w[data-tip]:hover::after{top:auto;bottom:calc(100% + 4px)}
+.strip-seg[data-tip]:hover::after{top:auto;bottom:calc(100% + 8px)}
 @keyframes tip-in{to{opacity:1}}
 @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes grow{from{width:0}to{width:var(--w)}}
 @keyframes col-grow{from{height:0}to{height:var(--h)}}
-@keyframes donut-spin{from{opacity:0;transform:rotate(-90deg)}to{opacity:1;transform:rotate(0)}}
-@keyframes radar-appear{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important}.bar-fill,.gb-fill{width:var(--w)!important}.col-fill{height:var(--h)!important}}
 @media(max-width:1200px){.toc{display:none}}
-@media(max-width:560px){.page{padding:50px 18px 72px}.bar-label{flex-basis:108px;width:108px}.bonus{columns:1}.bonus-grid{grid-template-columns:1fr}.figure{min-width:50%}.wall-controls{flex-direction:column}.wall-search{min-width:100%}.donut-wrap{flex-direction:column;align-items:center}.columns{height:160px}.radar-wrap svg{max-width:260px}}
+@media(max-width:560px){.page{padding:50px 18px 72px}.bar-label{flex-basis:108px;width:108px}.bonus-grid{grid-template-columns:1fr}.figure{min-width:50%}.wall-controls{flex-direction:column}.wall-search{min-width:100%}.columns{height:160px}.range-axis{padding-left:122px}.strip{height:26px}}
 @media print{
   .toolbar,.toc,.backtop,.wall-controls,.job-cue,.grain{display:none!important}
   body{background:#fff;color:#1a1a1a;font-size:12px}
