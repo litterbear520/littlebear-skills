@@ -15,6 +15,8 @@ export default function Dashboard({
   const roi =
     index.totalStake > 0 ? Math.round((index.cumulativeProfit / index.totalStake) * 100) : null;
   const settledDays = index.days.filter((d) => d.status === "settled");
+  // 票区不逐日铺开：最近一天完整展示，往期收进一个折叠列表（点日期行展开该天票卡）
+  const [latestDay, ...pastDays] = settledDaysData.filter((d) => (d.tickets ?? []).length > 0);
 
   return (
     <main className="wrap">
@@ -53,22 +55,50 @@ export default function Dashboard({
         <ProfitLine series={index.profitSeries} />
       </div>
 
-      {settledDaysData.filter((d) => (d.tickets ?? []).length > 0).map((day, di) => (
-        <section key={day.date} style={{ marginTop: di === 0 ? undefined : 26 }}>
+      {latestDay ? (
+        <section>
           <h2 className="section-title">
-            {di === 0 ? "我买的票" : "往期 · 我买的票"}
+            我买的票
             <span className="dim" style={{ fontSize: 13, fontWeight: 400 }}>
-              {day.date} {weekdayOf(day.date, day.weekday)} · 当日{" "}
-              <span style={{ color: profitVar(day.dayProfit) }}>{yuan(day.dayProfit)}</span>
+              {latestDay.date} {weekdayOf(latestDay.date, latestDay.weekday)} · 当日{" "}
+              <span style={{ color: profitVar(latestDay.dayProfit) }}>{yuan(latestDay.dayProfit)}</span>
             </span>
           </h2>
           <div className="ticket-grid">
-            {(day.tickets ?? []).map((t) => (
+            {(latestDay.tickets ?? []).map((t) => (
               <TicketCard key={t.id} ticket={t} />
             ))}
           </div>
         </section>
-      ))}
+      ) : null}
+
+      {pastDays.length > 0 ? (
+        <section style={{ marginTop: 26 }}>
+          <h2 className="section-title">往期 · 我买的票</h2>
+          <div className="card" style={{ padding: "2px 16px" }}>
+            {pastDays.map((day) => (
+              <details className="past-day" key={day.date}>
+                <summary>
+                  <span className="dp-date">{day.date}</span>
+                  <span className="dim">{weekdayOf(day.date, day.weekday)}</span>
+                  <span className="dim" style={{ fontSize: 12 }}>
+                    {(day.tickets ?? []).length} 张票
+                  </span>
+                  <span className="past-profit" style={{ color: profitVar(day.dayProfit) }}>
+                    {yuan(day.dayProfit)}
+                  </span>
+                  <span className="past-chev" aria-hidden="true" />
+                </summary>
+                <div className="ticket-grid" style={{ padding: "4px 0 16px" }}>
+                  {(day.tickets ?? []).map((t) => (
+                    <TicketCard key={t.id} ticket={t} />
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {settledDays.length > 0 ? (
         <>

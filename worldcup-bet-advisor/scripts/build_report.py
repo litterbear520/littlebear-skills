@@ -189,6 +189,28 @@ def brand_icon(brand, cls=""):
     return f'<span class="bic {cls}" style="color:{c}"><svg viewBox="0 0 24 24" aria-hidden="true">{inner}</svg></span>'
 
 
+def brand_slug(brand):
+    return re.sub(r"[^a-z0-9]+", "-", (brand or "").strip().lower()).strip("-")
+
+
+def fan_anchor(m, idx, brand):
+    """一览里的模型图标要跳去的锚点：第 idx 场（order 全局 1-based，与 #mN 一致）
+    该模型的"嘉豪先疯一句"卡片 id。该模型这场没有嘉豪原话就返回 None（不渲染成链接）。"""
+    for mod in m.get("models", []):
+        if mod.get("brand") == brand and extract_fan_block(mod.get("discussion_md")):
+            return f"m{idx}-fan-{brand_slug(brand)}"
+    return None
+
+
+def model_chip(cls, brand, aid):
+    """下注/比分一览里的模型小徽章。有原话可跳（aid 非空）就渲染成 <a>，
+    点击跳到该场该模型的"嘉豪先疯一句"；没有就保持纯展示的 <span>。"""
+    inner = f'{brand_icon(brand)}<i>{esc(brand)}</i>'
+    if aid:
+        return f'<a class="{cls}" href="#{aid}" title="看 {esc(brand)} 对这场怎么说">{inner}</a>'
+    return f'<span class="{cls}">{inner}</span>'
+
+
 # ---------- 玩法表 ----------
 def single_badge(flag):
     return '<span class="single yes">可单买这场</span>' if flag else '<span class="single no">只能串着买</span>'
@@ -291,8 +313,9 @@ def extract_fan_block(md):
     return out or None
 
 
-def render_fan_card(model):
-    """单模型嘉豪先疯一句卡片：四行原话照搬。比分行单独高亮（用户最关心的『猜测比分』）。"""
+def render_fan_card(model, idx=None):
+    """单模型嘉豪先疯一句卡片：四行原话照搬。比分行单独高亮（用户最关心的『猜测比分』）。
+    idx（场次全局序号）用于生成锚点 id，供下注/比分一览的模型图标点击跳转。"""
     fb = extract_fan_block(model.get("discussion_md"))
     if not fb:
         return ""
@@ -305,7 +328,8 @@ def render_fan_card(model):
                  f'<span class="fan-v">{esc(fb[lab])}</span></div>')
     if not rows:
         return ""
-    return (f'<div class="fan"><div class="fan-h">{brand_icon(model.get("brand"))}'
+    aid = f' id="m{idx}-fan-{brand_slug(model.get("brand"))}"' if idx else ""
+    return (f'<div class="fan"{aid}><div class="fan-h">{brand_icon(model.get("brand"))}'
             f'<span class="brand">{esc(model.get("brand",""))}</span>'
             f'<span class="mname">{esc(model.get("model_name",""))}</span></div>{rows}</div>')
 
@@ -347,7 +371,7 @@ def render_match(idx, m, a, value_labels):
     ko = esc(fmt_kickoff(m.get("kickoff_at")))
 
     # 各模型嘉豪先疯一句（原文照搬）
-    fans = "".join(render_fan_card(mod) for mod in m.get("models", []))
+    fans = "".join(render_fan_card(mod, idx) for mod in m.get("models", []))
     fans_block = (f'<div class="fans"><div class="fans-l">⬡ 嘉豪先疯一句 · 各模型原话</div>'
                   f'<div class="fans-grid">{fans}</div></div>') if fans else ""
 
@@ -425,7 +449,7 @@ def render_model_scores(order):
     同一比分被越多模型提到，排得越靠上、占比条越长（扎堆=值得留意）；命中市场比分榜的再标出市场去水概率。
     比分一律用 agent 归一后的『主队-客队』朝向；多比分（如 1:0 / 1:1）拆开各计一次。"""
     panels, heads, n = "", "", 0
-    for m in order:
+    for idx, m in enumerate(order, 1):  # idx 与逐场区 #mN 对齐，供图标锚点跳转
         # 1) 收集每个模型的归一比分 token（缺归一才退回原话抽取）
         picks = []  # [(brand, [tok,...])]
         for mod in m.get("models", []):
@@ -462,8 +486,7 @@ def render_model_scores(order):
             cnt = len(brands)
             pctw = round(cnt / n_models * 100)  # 占比＝该比分模型数 / 总模型数（与右侧 /N 一致）
             lead = cnt == maxc and maxc >= 2  # 全是 1 票时不高亮（谈不上扎堆）
-            chips = "".join(f'<span class="msc-chip">{brand_icon(b)}<i>{esc(b)}</i></span>'
-                            for b in brands)
+            chips = "".join(model_chip("msc-chip", b, fan_anchor(m, idx, b)) for b in brands)
             prob = mkt_prob.get(score)
             mk = f'<span class="msc-mk2">市场 {fp(prob)}</span>' if prob is not None else ""
             tag = '<span class="msc-tag">最多模型</span>' if lead else ""
@@ -491,7 +514,6 @@ def render_model_scores(order):
     return (f'<section class="modelscores reveal" id="modelscores">'
             f'<div class="mb-head"><span class="mb-k">⬡ 嘉豪预测</span>'
             f'<h2 class="mb-title">各模型猜测比分一览</h2></div>'
-            f'<p class="mb-intro">把同一比分被几个模型提到摆到一起——选的模型越多，排得越靠上、占比条越长，<b>扎堆＝该画面值得留意</b>。每行图标即选它的模型；多比分（如 1:0 / 1:1）拆开各计一次。命中市场比分榜的标出市场去水概率（模型＋市场都看好＝信号更强）。点上方标签切换比赛。</p>'
             f'<div class="tabs ms-tabs"><div class="tabs-head" role="tablist">{heads}</div>{panels}</div></section>')
 
 
@@ -658,7 +680,7 @@ def render_model_bets(order):
     if not any(any(has_bet(mm) for mm in m.get("models", [])) for m in order):
         return ""
     heads, panels, n = "", "", 0
-    for m in order:
+    for idx, m in enumerate(order, 1):  # idx 与逐场区 #mN 对齐，供图标锚点跳转
         models = m.get("models", [])
         pools = [mm["bet"].get("pool_code") for mm in models if has_bet(mm) and mm["bet"].get("pool_code")]
         if not pools:
@@ -691,7 +713,7 @@ def render_model_bets(order):
         for gi in range(min(3, len(outs))):
             brands = buckets[gi]
             hot = " hot" if brands and len(brands) == topn else ""
-            icons = ("".join(f'<span class="mb-ic">{brand_icon(b)}<i>{esc(b)}</i></span>' for b in brands)
+            icons = ("".join(model_chip("mb-ic", b, fan_anchor(m, idx, b)) for b in brands)
                      or '<span class="mb-empty">—</span>')
             cnt = f'<span class="mb-cnt">{len(brands)}/{total}</span>' if brands else ""
             od = f'<span class="mb-odds">@{odds[gi]}</span>' if odds[gi] is not None else ""
@@ -711,8 +733,6 @@ def render_model_bets(order):
     return (f'<section class="modelbets reveal" id="modelbets">'
             f'<div class="mb-head"><span class="mb-k">⬡ 嘉豪预测</span>'
             f'<h2 class="mb-title">各模型下注一览</h2></div>'
-            f'<p class="mb-intro">六个模型在嘉豪平台对每场的实际下注落位——点上方标签切换比赛，'
-            f'高亮格是当前最多模型押的方向。</p>'
             f'<div class="tabs mb-tabs"><div class="tabs-head" role="tablist">{heads}</div>{panels}</div></section>')
 
 
@@ -843,10 +863,10 @@ a{color:inherit}
 .bic.gen{font-size:11px;font-weight:800;color:var(--ink2);font-family:"Fraunces",serif}
 /* plans — 三档：聚焦切换 Tabs（一次看一档，选中档独占全宽面板） */
 .modelbets{margin-bottom:50px}
-.mb-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+.mb-head{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}
+.mb-intro{font-size:13px;color:var(--ink2);margin:-8px 0 16px;line-height:1.6;max-width:75ch}
 .mb-k{font-size:12px;font-weight:700;color:var(--clay-d);letter-spacing:.04em}
 .mb-title{font-family:"Fraunces",Georgia,serif;font-size:21px;font-weight:600;color:var(--ink)}
-.mb-intro{font-size:13px;color:var(--ink2);margin-bottom:16px;line-height:1.6;max-width:75ch}
 .mb-tabs .tabs-head{flex-wrap:wrap}
 .mb-tab{flex:1 1 auto;min-width:150px;justify-content:center;padding:13px 14px}
 .mb-tab .tt{min-width:0}
@@ -865,6 +885,11 @@ a{color:inherit}
 .mb-ic{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink2)}
 .mb-ic i{font-style:normal}
 .mb-ic .bic{width:18px;height:18px;flex:none}
+/* 图标是 <a> 时可点击跳到该场该模型的"嘉豪先疯一句"原话 */
+a.mb-ic{text-decoration:none;border-radius:8px;transition:.15s}
+a.mb-ic:hover{color:var(--clay-d)}
+a.mb-ic:hover .bic{border-color:var(--clay)}
+a.mb-ic:hover i{text-decoration:underline;text-underline-offset:3px}
 .mb-empty{color:var(--muted);font-size:18px;line-height:1}
 @media(max-width:640px){.mb-grid{grid-template-columns:1fr}.mb-tab{min-width:0;flex:1 1 42%}}
 /* 各模型猜测比分一览 · 共识视角：比分→哪些模型+几个，扎堆者居顶高亮 */
@@ -888,6 +913,9 @@ a{color:inherit}
 .msc-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:3px 10px 3px 7px}
 .msc-chip .bic{width:15px;height:15px;flex:none}
 .msc-chip i{font-style:normal}
+/* 图标是 <a> 时可点击跳到该场该模型的"嘉豪先疯一句"原话 */
+a.msc-chip{text-decoration:none;transition:.15s}
+a.msc-chip:hover{border-color:var(--clay);color:var(--clay-d);transform:translateY(-1px)}
 .msc-mktrow{display:flex;align-items:center;gap:12px;margin-top:11px;padding:10px 14px;border:1px dashed var(--line2);border-radius:12px;background:var(--paper2)}
 .msc-mkl{font-size:12px;font-weight:700;color:var(--muted);flex:none}
 .msc-scs{display:flex;flex-wrap:wrap;gap:8px}
@@ -969,7 +997,10 @@ a{color:inherit}
 .fans{margin:4px 0 6px}
 .fans-l{font-size:11.5px;font-weight:700;letter-spacing:.1em;color:var(--muted);margin-bottom:12px}
 .fans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
-.fan{border:1px solid var(--line);border-radius:14px;background:var(--panel2);padding:14px 16px}
+.fan{border:1px solid var(--line);border-radius:14px;background:var(--panel2);padding:14px 16px;scroll-margin-top:22px}
+/* 从一览的模型图标跳来时（URL #target）：陶土描边脉冲一下，指明"就是这张卡" */
+.fan:target{border-color:var(--clay);animation:fanping 1.6s ease-out 1}
+@keyframes fanping{0%{box-shadow:0 0 0 6px color-mix(in srgb,var(--clay) 35%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
 .fan-h{display:flex;align-items:center;gap:9px;margin-bottom:11px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .fan-h .bic{width:20px;height:20px;flex:none}
 .fan-h .brand{font-weight:700;color:var(--ink2);font-size:14px}

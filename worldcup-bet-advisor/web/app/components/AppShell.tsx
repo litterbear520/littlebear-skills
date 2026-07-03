@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 
 const GITHUB_URL = "https://github.com/litterbear520/littlebear-skills";
@@ -76,6 +76,80 @@ function CalendarIcon() {
   );
 }
 
+// 报告日期选择器：navitem 质感的触发按钮 + 卡片浮层菜单，替代原生 select
+// （原生下拉的选项列表无法主题化，暗色下尤其突兀）。当前项带陶土指示条，
+// 最新一期挂「最新」徽章；点外部 / Esc 关闭，日期多了菜单内部滚动。
+function ReportDatePicker({
+  dates,
+  current,
+  onPick,
+}: {
+  dates: string[];
+  current: string; // 当前查看的报告日期；仪表盘页传 ""（按钮显示最新但不点亮）
+  onPick: (d: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const label = current || dates[0];
+  return (
+    <div className="dp" ref={ref}>
+      <button
+        type="button"
+        className={current ? "dp-btn active" : "dp-btn"}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="选择报告日期"
+      >
+        <span className="navicon">
+          <CalendarIcon />
+        </span>
+        <span className="dp-date">{label}</span>
+        <span className="dp-wd">{weekday(label)}</span>
+        <span className={open ? "dp-chev up" : "dp-chev"} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="dp-menu" role="listbox" aria-label="报告日期">
+          {dates.map((d, i) => (
+            <button
+              key={d}
+              type="button"
+              role="option"
+              aria-selected={d === current}
+              className={d === current ? "dp-item on" : "dp-item"}
+              onClick={() => {
+                setOpen(false);
+                onPick(d);
+              }}
+            >
+              <span className="dp-date">{d}</span>
+              {i === 0 ? <span className="dp-new">最新</span> : null}
+              <span className="dp-wd">{weekday(d)}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function AppShell({
   reportDates,
   children,
@@ -84,6 +158,7 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState<boolean | null>(null);
   const [toc, setToc] = useState<{ label: string; href: string }[]>([]);
@@ -186,25 +261,16 @@ export default function AppShell({
         </Link>
 
         <div className="navlabel">报告</div>
-        <nav>
-          {reportDates.length === 0 ? (
-            <div className="dim" style={{ fontSize: 13, padding: "7px 12px" }}>暂无报告</div>
-          ) : (
-            reportDates.map((d) => (
-              <Link
-                key={d}
-                href={`/r/${d}`}
-                className={d === currentDate && !onProfit ? "navitem active" : "navitem"}
-              >
-                <span className="navicon">
-                  <CalendarIcon />
-                </span>
-                <span className="date-num">{d}</span>
-                <span className="date-wd">{weekday(d)}</span>
-              </Link>
-            ))
-          )}
-        </nav>
+        {reportDates.length === 0 ? (
+          <div className="dim" style={{ fontSize: 13, padding: "7px 12px" }}>暂无报告</div>
+        ) : (
+          // 报告不逐日叠列：一个日期选择器，默认当前（最新=今天），可跳任意历史
+          <ReportDatePicker
+            dates={reportDates}
+            current={!onProfit ? currentDate : ""}
+            onPick={(d) => router.push(`/r/${d}`)}
+          />
+        )}
 
         {!onProfit && toc.length > 0 ? (
           <>

@@ -245,6 +245,7 @@ a {
   align-items: baseline;
   gap: 7px;
   min-width: 0;
+  flex-wrap: wrap;
 }
 .pick-sel {
   font-weight: 600;
@@ -252,6 +253,32 @@ a {
 }
 .ticket-leg.lost .pick-sel {
   color: var(--text-tertiary);
+}
+/* 复式腿的多个选项：一枚枚票面小格（如 比分 2:0 · 总进球 3球） */
+.pick-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 13px;
+}
+.ticket-leg.lost .pick-chip {
+  color: var(--text-tertiary);
+  opacity: 0.6;
+}
+.pick-tag {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+/* 单选项腿不走 chip（无 gap），标签和值之间手动留缝 */
+.pick-sel .pick-tag {
+  margin-right: 5px;
 }
 .pick-odds {
   font-size: 13px;
@@ -584,6 +611,172 @@ summary:focus-visible,
 }
 .navitem.active .date-wd {
   color: color-mix(in srgb, var(--clay) 70%, var(--muted));
+}
+
+/* 报告日期选择器：navitem 质感触发钮 + 卡片浮层菜单，一格顶掉整列日期 */
+.dp {
+  position: relative;
+}
+.dp-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink2);
+  background: none;
+  border: 0;
+  padding: 8px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.dp-btn:hover {
+  background: var(--panel2);
+  color: var(--ink);
+}
+.dp-btn.active {
+  color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 10%, transparent);
+}
+.dp-btn.active .navicon {
+  color: var(--clay);
+}
+.dp-date {
+  font-variant-numeric: tabular-nums;
+}
+.dp-wd {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.dp-btn.active .dp-wd {
+  color: color-mix(in srgb, var(--clay) 70%, var(--muted));
+}
+.dp-chev {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: -2px 2px 0 9px;
+  border-right: 1.6px solid var(--muted);
+  border-bottom: 1.6px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.18s ease;
+}
+.dp-chev.up {
+  transform: translateY(3px) rotate(-135deg);
+}
+.dp-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 5px;
+  max-height: 302px;
+  overflow-y: auto;
+  animation: dp-in 0.16s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes dp-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+.dp-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--ink2);
+  background: none;
+  border: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.dp-item:hover {
+  background: var(--panel2);
+  color: var(--ink);
+}
+.dp-item.on {
+  color: var(--clay);
+  background: color-mix(in srgb, var(--clay) 10%, transparent);
+}
+.dp-item.on::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--clay);
+}
+.dp-item.on .dp-wd {
+  color: color-mix(in srgb, var(--clay) 70%, var(--muted));
+}
+.dp-new {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--clay);
+  border-radius: 20px;
+  padding: 1px 7px;
+}
+[data-theme="dark"] .dp-new {
+  color: #1a140f;
+}
+
+/* 往期 · 我买的票：每天一行折叠（日期 · 周几 · 张数 ── 盈亏 ˅），点开铺该天票卡 */
+.past-day summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  font-size: 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.past-day summary::-webkit-details-marker {
+  display: none;
+}
+.past-day + .past-day {
+  border-top: 1px solid var(--line);
+}
+.past-profit {
+  margin-left: auto;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.past-chev {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: -3px 2px 0 2px;
+  border-right: 1.6px solid var(--muted);
+  border-bottom: 1.6px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.18s ease;
+}
+.past-day[open] .past-chev {
+  transform: translateY(2px) rotate(-135deg);
+}
+.past-day summary:hover .dp-date {
+  color: var(--clay);
 }
 
 .navicon {

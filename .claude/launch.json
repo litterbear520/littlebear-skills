@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["-C", "worldcup-bet-advisor/web", "start", "--port", "3210"],
       "port": 3210
+    },
+    {
+      "name": "worldcup-web-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "worldcup-bet-advisor/web", "dev", "--port", "3211"],
+      "port": 3211
     }
   ]
 }
