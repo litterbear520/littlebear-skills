@@ -30,6 +30,13 @@ def norm_key(label):
     return re.sub(r"[\s\-_./]+", "", str(label)).casefold()
 
 
+# 指纹相同但概念确实不同的已知例外——不是同义变体,不报。
+# (标注规范建议写 `ReAct范式` 主动避开;此白名单是模型仍写 `ReAct` 时的兜底。)
+DISTINCT_OK = [
+    {"ReAct", "React"},  # Agent 推理范式 vs 前端框架
+]
+
+
 def canon_url(url):
     """与 build_report.py 一致的 URL 归一:取 /job_detail/<id> 的岗位 ID,
     避免 ?securityId= 等会话参数导致对不上号。"""
@@ -87,7 +94,8 @@ def main():
         for p in per_job:
             for label in p.get(field, []) or []:
                 variants[norm_key(label)].add(str(label))
-        suspect = {k: v for k, v in variants.items() if len(v) > 1}
+        suspect = {k: v for k, v in variants.items()
+                   if len(v) > 1 and not any(v <= ok for ok in DISTINCT_OK)}
         if suspect:
             issues += 1
             print(f"[问题] {field} 存在 {len(suspect)} 组疑似同义变体(会被当成不同项,占比被摊薄,请统一写法):")
