@@ -34,15 +34,15 @@
           "away": "加纳"
         }
       ],
-      "stake": 48.0,
+      "stake": 16.0,
       "combinedOdds": 0,
       "status": "loss",
       "payout": 0.0,
-      "profit": -48.0,
+      "profit": -16.0,
       "combos": 8,
-      "multiple": 3
+      "multiple": 1
     }
   ],
-  "dayProfit": -48.0,
-  "dayStake": 48.0
+  "dayProfit": -16.0,
+  "dayStake": 16.0
 }
