@@ -2,8 +2,47 @@
   "date": "2026-07-03",
   "weekday": "周五",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-07-03-0",
+      "tier": "自选",
+      "type": "3串1",
+      "legs": [
+        {
+          "text": "[平 / 1球]",
+          "odds": null,
+          "hit": true,
+          "matchNo": "周五086",
+          "home": "澳大利亚",
+          "away": "埃及"
+        },
+        {
+          "text": "[让胜(-2) / 2:0]",
+          "odds": null,
+          "hit": false,
+          "matchNo": "周五087",
+          "home": "阿根廷",
+          "away": "佛得角"
+        },
+        {
+          "text": "[2:0 / 3球]",
+          "odds": null,
+          "hit": false,
+          "matchNo": "周五088",
+          "home": "哥伦比亚",
+          "away": "加纳"
+        }
+      ],
+      "stake": 48.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -48.0,
+      "combos": 8,
+      "multiple": 3
+    }
+  ],
+  "dayProfit": -48.0,
+  "dayStake": 48.0
 }
