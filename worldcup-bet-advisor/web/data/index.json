@@ -2,6 +2,13 @@
   "updatedAt": null,
   "days": [
     {
+      "date": "2026-07-05",
+      "weekday": "周日",
+      "status": "open",
+      "hasReport": true,
+      "dayProfit": null
+    },
+    {
       "date": "2026-07-04",
       "weekday": "周六",
       "status": "settled",
@@ -115,6 +122,7 @@
     }
   ],
   "reportDates": [
+    "2026-07-05",
     "2026-07-04",
     "2026-07-03",
     "2026-07-02",
