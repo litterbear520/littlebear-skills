@@ -4,9 +4,9 @@
     {
       "date": "2026-07-04",
       "weekday": "周六",
-      "status": "open",
+      "status": "settled",
       "hasReport": true,
-      "dayProfit": null
+      "dayProfit": -18.0
     },
     {
       "date": "2026-07-03",
@@ -132,9 +132,9 @@
     "2026-06-20",
     "2026-06-19"
   ],
-  "cumulativeProfit": -161.7,
-  "totalStake": 472.0,
-  "totalTickets": 27,
+  "cumulativeProfit": -179.7,
+  "totalStake": 490.0,
+  "totalTickets": 28,
   "winTickets": 9,
   "profitSeries": [
     {
@@ -196,6 +196,10 @@
     {
       "date": "2026-07-03",
       "profit": -16.0
+    },
+    {
+      "date": "2026-07-04",
+      "profit": -18.0
     }
   ]
 }
