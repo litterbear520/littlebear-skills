@@ -2,8 +2,39 @@
   "date": "2026-07-05",
   "weekday": "周日",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-07-05-0",
+      "tier": "自选",
+      "type": "2串1",
+      "legs": [
+        {
+          "text": "[1球 / 2球]",
+          "odds": null,
+          "hit": false,
+          "home": "墨西哥",
+          "away": "英格兰",
+          "category": "总进球"
+        },
+        {
+          "text": "[3球 / 4球]",
+          "odds": null,
+          "hit": true,
+          "home": "巴西",
+          "away": "挪威",
+          "category": "总进球"
+        }
+      ],
+      "stake": 16.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -16.0,
+      "combos": 4,
+      "multiple": 2
+    }
+  ],
+  "dayProfit": -16.0,
+  "dayStake": 16.0
 }
