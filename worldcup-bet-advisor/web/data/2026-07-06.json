@@ -2,8 +2,41 @@
   "date": "2026-07-06",
   "weekday": "周一",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-07-06-goals-2x1",
+      "tier": "自选",
+      "type": "2串1·总进球复式",
+      "legs": [
+        {
+          "text": "美国 vs 比利时 [总进球 3球 / 总进球 4球]",
+          "odds": null,
+          "hit": false,
+          "matchNo": "周一094",
+          "home": "美国",
+          "away": "比利时",
+          "category": "总进球"
+        },
+        {
+          "text": "葡萄牙 vs 西班牙 [总进球 2球 / 总进球 3球]",
+          "odds": null,
+          "hit": false,
+          "matchNo": "周一093",
+          "home": "葡萄牙",
+          "away": "西班牙",
+          "category": "总进球"
+        }
+      ],
+      "stake": 16.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -16.0,
+      "combos": 4,
+      "multiple": 2
+    }
+  ],
+  "dayProfit": -16.0,
+  "dayStake": 16.0
 }

@@ -2,11 +2,18 @@
   "updatedAt": null,
   "days": [
     {
-      "date": "2026-07-06",
-      "weekday": "周一",
+      "date": "2026-07-07",
+      "weekday": "周二",
       "status": "open",
       "hasReport": true,
       "dayProfit": null
+    },
+    {
+      "date": "2026-07-06",
+      "weekday": "周一",
+      "status": "settled",
+      "hasReport": true,
+      "dayProfit": -16.0
     },
     {
       "date": "2026-07-05",
@@ -129,6 +136,7 @@
     }
   ],
   "reportDates": [
+    "2026-07-07",
     "2026-07-06",
     "2026-07-05",
     "2026-07-04",
@@ -148,9 +156,9 @@
     "2026-06-20",
     "2026-06-19"
   ],
-  "cumulativeProfit": -195.7,
-  "totalStake": 506.0,
-  "totalTickets": 29,
+  "cumulativeProfit": -211.7,
+  "totalStake": 522.0,
+  "totalTickets": 30,
   "winTickets": 9,
   "profitSeries": [
     {
@@ -219,6 +227,10 @@
     },
     {
       "date": "2026-07-05",
+      "profit": -16.0
+    },
+    {
+      "date": "2026-07-06",
       "profit": -16.0
     }
   ]
