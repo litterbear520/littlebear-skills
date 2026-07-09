@@ -2,8 +2,59 @@
   "date": "2026-07-07",
   "weekday": "周二",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-07-07-score-single",
+      "tier": "自选",
+      "type": "比分·单场固定(单关)",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": "比分 0:0",
+          "odds": 12.0,
+          "hit": false,
+          "home": "阿根廷",
+          "away": "埃及",
+          "category": "比分",
+          "stake": 2.0
+        },
+        {
+          "text": "比分 3:1",
+          "odds": 7.0,
+          "hit": false,
+          "home": "阿根廷",
+          "away": "埃及",
+          "category": "比分",
+          "stake": 2.0
+        },
+        {
+          "text": "比分 3:1",
+          "odds": 29.0,
+          "hit": false,
+          "home": "瑞士",
+          "away": "哥伦比亚",
+          "category": "比分",
+          "stake": 2.0
+        },
+        {
+          "text": "比分 0:0",
+          "odds": 8.0,
+          "hit": true,
+          "home": "瑞士",
+          "away": "哥伦比亚",
+          "category": "比分",
+          "stake": 2.0,
+          "payout": 16.0
+        }
+      ],
+      "stake": 8.0,
+      "combinedOdds": 0,
+      "status": "win",
+      "payout": 16.0,
+      "profit": 8.0
+    }
+  ],
+  "dayProfit": 8.0,
+  "dayStake": 8.0
 }
