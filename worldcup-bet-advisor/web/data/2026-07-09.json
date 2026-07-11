@@ -2,8 +2,46 @@
   "date": "2026-07-09",
   "weekday": "周四",
   "hasReport": true,
-  "status": "open",
-  "tickets": [],
-  "dayProfit": null,
-  "dayStake": null
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-07-09-0",
+      "tier": "自选",
+      "type": "比分单关复式",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": "比分 3:3 · 终2:0 未中",
+          "odds": 35,
+          "hit": false,
+          "matchNo": "周四097",
+          "home": "法国",
+          "away": "摩洛哥",
+          "category": "比分",
+          "pick": "3:3",
+          "stake": 4.0
+        },
+        {
+          "text": "比分 3:1 · 终2:0 未中",
+          "odds": 9,
+          "hit": false,
+          "matchNo": "周四097",
+          "home": "法国",
+          "away": "摩洛哥",
+          "category": "比分",
+          "pick": "3:1",
+          "stake": 4.0
+        }
+      ],
+      "stake": 8.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -8.0,
+      "multiple": 2
+    }
+  ],
+  "dayProfit": -8.0,
+  "dayStake": 8.0,
+  "summary": "07-09 周四买入法国 vs 摩洛哥比分单关复式，2倍，本金8元；90分钟法国2:0摩洛哥，两项均未命中。"
 }

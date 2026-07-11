@@ -1,0 +1,47 @@
+{
+  "date": "2026-07-10",
+  "weekday": "周五",
+  "status": "settled",
+  "tickets": [
+    {
+      "id": "2026-07-10-0",
+      "tier": "自选",
+      "type": "比分单关复式",
+      "mode": "independent",
+      "legs": [
+        {
+          "text": "比分 3:3 · 终2:1 未中",
+          "odds": 45,
+          "hit": false,
+          "matchNo": "周五098",
+          "home": "西班牙",
+          "away": "比利时",
+          "category": "比分",
+          "pick": "3:3",
+          "stake": 6.0
+        },
+        {
+          "text": "比分 3:1 · 终2:1 未中",
+          "odds": 9.5,
+          "hit": false,
+          "matchNo": "周五098",
+          "home": "西班牙",
+          "away": "比利时",
+          "category": "比分",
+          "pick": "3:1",
+          "stake": 6.0
+        }
+      ],
+      "stake": 12.0,
+      "combinedOdds": 0,
+      "status": "loss",
+      "payout": 0.0,
+      "profit": -12.0,
+      "multiple": 3
+    }
+  ],
+  "dayProfit": -12.0,
+  "dayStake": 12.0,
+  "hasReport": false,
+  "summary": "07-10 周五买入西班牙 vs 比利时比分单关复式，3倍，本金12元；90分钟西班牙2:1比利时，两项均未命中。"
+}
