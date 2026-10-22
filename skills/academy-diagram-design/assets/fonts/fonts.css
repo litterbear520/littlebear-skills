@@ -1,0 +1,7 @@
+/* 课件图用的拉丁字体（Google Fonts 的 latin 子集，许可见同目录 OFL-*.txt）。中文用本机的 Noto Serif SC / Noto Sans SC，或环境变量 CJK_FONTS_CSS 指向的自托管字体。 */
+@font-face { font-family: 'Lora'; font-style: normal; font-weight: 400 700; src: url(./Lora.woff2) format('woff2'); }
+@font-face { font-family: 'Lora'; font-style: italic; font-weight: 400 700; src: url(./Lora-Italic.woff2) format('woff2'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 400; src: url(./Poppins-Regular.woff2) format('woff2'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 600; src: url(./Poppins-SemiBold.woff2) format('woff2'); }
+@font-face { font-family: 'Poppins'; font-style: italic; font-weight: 400; src: url(./Poppins-Italic.woff2) format('woff2'); }
+@font-face { font-family: 'Roboto Mono'; font-style: normal; font-weight: 400 700; src: url(./RobotoMono.woff2) format('woff2'); }

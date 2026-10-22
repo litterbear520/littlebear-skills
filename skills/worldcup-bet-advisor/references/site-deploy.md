@@ -19,7 +19,7 @@
 ### 一次性设置(约 3 分钟)
 
 ```bash
-cd <本 skill 目录>/web      # 形如 .../littlebear-skills/worldcup-bet-advisor/web
+cd <本 skill 目录>/web      # 形如 .../littlebear-skills/skills/worldcup-bet-advisor/web
 pnpm install               # 装依赖
 npx vercel login           # 用你的账号登录(GitHub 登录即可)
 npx vercel link            # 在这个目录建/连一个 Vercel 项目(按提示选 create new)
@@ -57,7 +57,7 @@ bash scripts/publish_site.sh \
 
 1. ✅ `web/.gitignore` 已注释掉 `data/`、`public/reports/` 两行(数据改为入库)。
 2. ✅ Vercel 项目已用 `npx vercel git connect <repo-url>` 连上 `litterbear520/littlebear-skills`。
-3. ⬜ **(需在 Vercel 后台手动设一次)** 项目 `worldcup-bet-site` → Settings → Build and Deployment → **Root Directory** 填 `worldcup-bet-advisor/web` → Save。本仓库是 monorepo、Next.js 应用在子目录,不设这个 Git 构建会在仓库根找不到 `package.json` 而失败。
+3. ⬜ **(需在 Vercel 后台手动设一次)** 项目 `worldcup-bet-site` → Settings → Build and Deployment → **Root Directory** 填 `skills/worldcup-bet-advisor/web` → Save。本仓库是 monorepo、Next.js 应用在子目录,不设这个 Git 构建会在仓库根找不到 `package.json` 而失败。
 4. 之后日常发布 = 出报告 + settle 后 `git add` 数据 → `git commit` → `git push`,Vercel 自动上线;`publish_site.sh` 不再需要 `--deploy`。
 
 **多机同步**:任意电脑 `git clone` 本仓库(历史数据随仓库一起下来)+ 配好 litterbear520 的推送凭证(`gh auth login` 登 litterbear520 / PAT / SSH key),即可 `pull → 出报告 → commit → push`。推送权限看的是**登录凭证**,不是 commit 署名。

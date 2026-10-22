@@ -1,0 +1,32 @@
+<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <!-- 范例：外层容器 + 米黄组件框 + 压在箭头上的标签框 + 米黄空心框。照《MCP 简介 · MCP 客户端》的配图 1:1 复刻后汉化 -->
+  <defs>
+    <marker id="head" viewBox="0 0 28 24" refX="0" refY="12" markerWidth="28" markerHeight="24" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="head" d="M0,0 L28,12 L0,24 Z"/></marker>
+  </defs>
+  <rect class="bg" width="1920" height="1080"/>
+
+  <text class="t-title" x="960" y="130" text-anchor="middle">MCP 通信</text>
+  <text class="t-sub" x="960" y="210" text-anchor="middle">MCP 规范定义了可以交换的不同消息类型</text>
+
+  <rect class="container" x="183.5" y="369" width="511" height="512" rx="56"/>
+  <text class="t-xl" x="440" y="457" text-anchor="middle">您的服务器</text>
+  <rect class="f-tan" x="238" y="516" width="403" height="230" rx="40"/>
+  <text class="t-l" x="440" y="649.5" text-anchor="middle">MCP 客户端</text>
+
+  <!-- 去程：说明在上，标签框的下边压在箭头上 -->
+  <text class="t-cap" x="1028" y="436" text-anchor="middle">请用这些参数</text>
+  <text class="t-cap" x="1028" y="468" text-anchor="middle">运行指定的工具</text>
+  <rect class="tag" x="825.5" y="479.5" width="403" height="94.5"/>
+  <text class="t-tag" x="1027.5" y="540.4" text-anchor="middle">CallToolRequest</text>
+  <line class="line" x1="641" y1="574" x2="1310" y2="574" marker-end="url(#head)"/>
+
+  <!-- 回程：标签框挂在箭头下面，说明在框下 -->
+  <line class="line" x1="1336" y1="689.5" x2="670" y2="689.5" marker-end="url(#head)"/>
+  <rect class="tag" x="825.5" y="689.5" width="403" height="91"/>
+  <text class="t-tag" x="1027.5" y="748" text-anchor="middle">CallToolResult</text>
+  <text class="t-cap" x="1028" y="822" text-anchor="middle">这是工具运行的结果</text>
+
+  <rect class="ring" x="1343" y="517" width="414" height="228" rx="18"/>
+  <text class="t-name" x="1550" y="622.4" text-anchor="middle">GitHub 的</text>
+  <text class="t-name" x="1549" y="670.4" text-anchor="middle">MCP 服务器</text>
+</svg>

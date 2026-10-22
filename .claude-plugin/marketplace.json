@@ -1,0 +1,24 @@
+{
+  "name": "littlebear",
+  "description": "小熊自己写、自己天天在用的 Agent Skills：课件风配图、课文式讲解、BOSS 直聘岗位分析、世界杯竞彩预测汇总。",
+  "owner": {
+    "name": "litterbear520",
+    "url": "https://github.com/litterbear520"
+  },
+  "plugins": [
+    {
+      "name": "littlebear-skills",
+      "source": "./",
+      "description": "academy-diagram-design、explain、boss-job-analyzer、worldcup-bet-advisor 四个技能，一次装齐。",
+      "author": {
+        "name": "litterbear520",
+        "url": "https://github.com/litterbear520"
+      },
+      "homepage": "https://huangsitao.fun/skills",
+      "repository": "https://github.com/litterbear520/littlebear-skills",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": ["diagram", "explain", "job-analysis", "report", "chinese"]
+    }
+  ]
+}

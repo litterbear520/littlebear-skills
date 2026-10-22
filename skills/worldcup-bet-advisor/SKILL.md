@@ -211,7 +211,7 @@ python scripts/build_report.py --merged "$WS/merged.json" --date <YYYY-MM-DD> \
 
 ```bash
 bash scripts/publish_site.sh --report "$WS/report.html" --date <YYYY-MM-DD>
-git add worldcup-bet-advisor/web/data worldcup-bet-advisor/web/public/reports && \
+git add skills/worldcup-bet-advisor/web/data skills/worldcup-bet-advisor/web/public/reports && \
   git commit -m "report: <日期>" && git push   # Vercel 自动上线
 ```
 
@@ -231,7 +231,7 @@ git add worldcup-bet-advisor/web/data worldcup-bet-advisor/web/public/reports &&
    腿里尽量带 `home`/`away` 字段：票卡会渲染"主队 Vs 客队"行，且 `text` 里再写的"主队 vs 客队"前缀会被自动剥掉（不显示两遍）；复式一场多选写成 `"text": "主队 vs 客队 [2:0 / 3球]"`，方括号里的选项会拆成"比分 2:0""总进球 3球"独立小格展示。
 4. 回填进仪表盘：
    ```bash
-   python scripts/export_site_data.py settle --retro "$PREV/settle.json" --site-data worldcup-bet-advisor/web/data
+   python scripts/export_site_data.py settle --retro "$PREV/settle.json" --site-data skills/worldcup-bet-advisor/web/data
    ```
    它按"本金 × 命中腿赔率连乘"算真实盈亏，渲染成"我买的票"没中卡片 + 每日收益柱状图。**只算盈亏、不做任何模型校准或买法复盘。**
 

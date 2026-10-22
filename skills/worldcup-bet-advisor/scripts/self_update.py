@@ -26,6 +26,7 @@ from pathlib import Path
 OWNER = "litterbear520"
 REPO = "littlebear-skills"
 SKILL_NAME = "worldcup-bet-advisor"
+SKILL_PATH = f"skills/{SKILL_NAME}"   # 技能在仓库里的路径，查提交历史时按它过滤
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
 CACHE = SKILL_DIR / ".self_update.json"
@@ -93,7 +94,7 @@ def git_update(skill_dir: Path) -> str:
 def remote_latest_sha(timeout: int = TIMEOUT) -> str | None:
     """该技能目录的最新 commit sha（commits API 带 path 过滤，匿名访问）。失败返回 None。"""
     url = (f"https://api.github.com/repos/{OWNER}/{REPO}/commits"
-           f"?path={SKILL_NAME}&per_page=1")
+           f"?path={SKILL_PATH}&per_page=1")
     req = urllib.request.Request(
         url, headers={"Accept": "application/vnd.github+json", "User-Agent": UA})
     with urllib.request.urlopen(req, timeout=timeout) as resp:

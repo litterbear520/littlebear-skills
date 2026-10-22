@@ -1,0 +1,60 @@
+<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <!-- 范例：四个参与者的时序图 + 药丸标签 + 便签 + 底部结论条。照《MCP 高级主题 · Sampling》的选项 1 配图 1:1 复刻后汉化 -->
+  <defs>
+    <marker id="head" viewBox="0 0 28 24" refX="0" refY="12" markerWidth="28" markerHeight="24" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="head" d="M0,0 L28,12 L0,24 Z"/></marker>
+    <marker id="head-faint" viewBox="0 0 21 15" refX="0" refY="7.5" markerWidth="21" markerHeight="15" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="head-faint" d="M0,0 L21,7.5 L0,15 Z"/></marker>
+  </defs>
+  <rect class="bg" width="1920" height="1080"/>
+
+  <!-- 生命线先画，便签盖在上面 -->
+  <line class="life" x1="215" y1="142" x2="215" y2="801"/>
+  <line class="life" x1="692" y1="142" x2="692" y2="573"/>
+  <line class="life" x1="1205" y1="142" x2="1205" y2="803"/>
+  <line class="life" x1="1705" y1="142" x2="1705" y2="809"/>
+
+  <!-- 参与者：关键的那个用米黄、不描边 -->
+  <rect class="f-tan" x="61" y="42.5" width="308" height="97.5" rx="16"/>
+  <text class="t-name" x="215" y="107" text-anchor="middle">Claude</text>
+  <rect class="actor" x="537.5" y="42.5" width="309" height="97.5" rx="16"/>
+  <text class="t-name" x="692" y="80" text-anchor="middle">Next JS +</text>
+  <text class="t-name" x="692" y="126" text-anchor="middle">MCP 客户端</text>
+  <rect class="actor" x="1050.5" y="42.5" width="309" height="97.5" rx="16"/>
+  <text class="t-name" x="1205" y="106" text-anchor="middle">MCP 服务器</text>
+  <rect class="actor" x="1550.5" y="42.5" width="309" height="97.5" rx="16"/>
+  <text class="t-name" x="1705" y="107.5" text-anchor="middle">Wikipedia</text>
+
+  <!-- 次要消息：浅灰细线，说明写在线上方 -->
+  <text class="t-cap" x="453.5" y="205.6" text-anchor="middle">研究一个主题</text>
+  <line class="faint" x1="692" y1="213" x2="236" y2="213" marker-end="url(#head-faint)"/>
+
+  <rect class="f-light" x="279" y="289" width="362" height="43" rx="7"/>
+  <text class="t-label" x="460" y="319.9" text-anchor="middle">运行 research 工具</text>
+  <line class="faint" x1="215" y1="333" x2="671" y2="333" marker-end="url(#head-faint)"/>
+  <rect class="f-light" x="772" y="289" width="351" height="43" rx="7"/>
+  <text class="t-label" x="947.5" y="319.9" text-anchor="middle">工具调用请求</text>
+  <line class="faint" x1="692" y1="333" x2="1184" y2="333" marker-end="url(#head-faint)"/>
+
+  <text class="t-cap" x="1463" y="324.6" text-anchor="middle">研究中……</text>
+  <line class="faint" x1="1205" y1="333" x2="1684" y2="333" marker-end="url(#head-faint)"/>
+  <text class="t-cap" x="1463" y="369.6" text-anchor="middle">研究中……</text>
+  <line class="faint" x1="1205" y1="379" x2="1684" y2="379" marker-end="url(#head-faint)"/>
+  <text class="t-cap" x="1463" y="419.6" text-anchor="middle">研究中……</text>
+  <line class="faint" x1="1205" y1="429" x2="1684" y2="429" marker-end="url(#head-faint)"/>
+
+  <!-- 便签：服务器此刻的状态和念头，关键那句加粗 -->
+  <rect class="f-light" x="1059" y="478" width="293" height="97" rx="24"/>
+  <text class="t-note" x="1205.5" y="538.4" text-anchor="middle">研究完成！</text>
+  <rect class="f-light" x="1059" y="617.5" width="293" height="130" rx="24"/>
+  <text class="t-note b" x="1205.5" y="674.9" text-anchor="middle">我需要用 Claude</text>
+  <text class="t-note b" x="1205.5" y="713.9" text-anchor="middle">来总结结果！</text>
+
+  <!-- 主消息：全图唯一一条黑线，说明用 t-emph -->
+  <text class="t-emph" x="1034" y="675.4" text-anchor="end">请总结一下……</text>
+  <line class="line" x1="1058" y1="682.5" x2="244" y2="682.5" marker-end="url(#head)"/>
+
+  <!-- 结论条 -->
+  <rect class="f-clay" x="459" y="847" width="1051" height="191" rx="40"/>
+  <text class="t-name b" x="984" y="908.4" text-anchor="middle">选项1</text>
+  <text class="t-name" x="984" y="957.4" text-anchor="middle">让 MCP 服务器直接访问 Claude，</text>
+  <text class="t-name" x="984" y="1007.4" text-anchor="middle">由研究工具自己生成摘要</text>
+</svg>

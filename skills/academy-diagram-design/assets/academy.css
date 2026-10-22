@@ -1,0 +1,60 @@
+/* Academy 课件风配图的全部样式。SVG 里只写类名，scripts/render.mjs 渲染时把本文件连同字体一起注入。
+   数值在 1920×1080 的 Academy 原图上量过（MCP 两门课、《使用 Claude API 构建》）。改这里，重新渲染后所有图一起变。
+   render.mjs 的检查会把这里出现的颜色当作调色板：图里出现别的颜色会报 WARN。 */
+
+/* ── 画布 ── */
+.bg { fill: #f4f7f2; }
+
+/* ── 文字：默认 Lora、近黑。字号按 1920 宽画布，缩到正文列宽后约为这里的 0.37 倍 ── */
+text { fill: #141413; font-family: Lora, 'Noto Serif SC', serif; font-size: 41px; }
+.t-title  { font-family: Poppins, 'Noto Sans SC', sans-serif; font-weight: 600; font-size: 60px; }  /* 幻灯片标题 */
+.t-sub    { font-size: 37px; }                      /* 标题下的副标题、左栏要点 */
+.t-xl     { font-size: 54px; }                      /* 外层容器、大色块的名字 */
+.t-l      { font-size: 48px; }                      /* 主框的名字 */
+.t-name   { font-size: 41px; }                      /* 参与者、框、结论条 */
+.t-tag    { font-size: 37px; font-weight: 700; }    /* 标签框里的消息名、粗箭头上的说明、框里的粗体句 */
+.t-emph   { font-size: 36px; font-weight: 700; font-style: italic; }  /* 要读者盯住的那条消息 */
+.t-note   { font-size: 33px; }                      /* 便签 */
+.t-body   { font-size: 32px; }                      /* 卡片里的要点 */
+.t-cap    { font-size: 27px; font-style: italic; }  /* 连线上的说明（含中文时 render.mjs 自动改正体） */
+.t-label  { font-size: 26px; }                      /* 药丸标签、表头这类短标签 */
+.t-step   { font-family: Poppins, 'Noto Sans SC', sans-serif; font-weight: 600; font-size: 29px; }    /* 步骤条 */
+.t-card   { font-family: Poppins, 'Noto Sans SC', sans-serif; font-weight: 600; font-size: 43px; }    /* 卡片标题 */
+.t-cell-h { font-family: Poppins, 'Noto Sans SC', sans-serif; font-weight: 600; font-size: 27.5px; }  /* 消息表的角色格、块类型格 */
+.t-cell   { font-family: Poppins, 'Noto Sans SC', sans-serif; font-style: italic; font-size: 29px; } /* 消息表的内容格 */
+.t-code   { font-family: 'Roboto Mono', 'Noto Sans SC', monospace; font-size: 32px; fill: #d09070; } /* 代码面板里的代码 */
+.b        { font-weight: 700; }                     /* 修饰：加粗 */
+.dim      { fill: #5e5d52; }                        /* 修饰：还没到的步骤上的字 */
+
+/* ── 色块 ── */
+.f-tan   { fill: #e2d4b0; }  /* 米黄：我方组件、客户端、用户消息、关键参与者 */
+.f-clay  { fill: #c98e67; }  /* 陶土：线上传递的消息、助手消息、结论条 */
+.f-deep  { fill: #be6443; }  /* 深陶土：当前步骤、Claude 大块 */
+.f-light { fill: #eae9e5; }  /* 浅灰：便签、药丸标签、大色块里的内框 */
+.f-gray  { fill: #b6b5ab; }  /* 暖灰：大色块、还没到的步骤 */
+.f-cell  { fill: #deddd4; }  /* 消息表的块类型格 */
+.f-panel { fill: #0c0c0c; }  /* 代码面板 */
+.f-ink   { fill: #141413; }  /* 要点前的圆点 */
+
+/* ── 框 ── */
+.actor     { fill: #eae9e5; stroke: #6c6c63; stroke-width: 4; }    /* 时序图参与者 */
+.container { fill: none; stroke: #b3b3aa; stroke-width: 2.5; }     /* 外层容器 */
+.ring      { fill: none; stroke: #e2d4b0; stroke-width: 6.5; }     /* 米黄空心框：外部服务 */
+.tag       { fill: #c98e67; stroke: #141413; stroke-width: 3.5; }  /* 压在箭头上的消息名标签，直角 */
+.grid      { fill: none; stroke: #909090; stroke-width: 1.6; }     /* 消息表格线 */
+.divider   { fill: none; stroke: #b3b3aa; stroke-width: 2; }       /* 左文右图的竖分隔线 */
+
+/* ── 连线：线只画到箭头底边，marker 再往前补出箭头（见 template.svg 的 <defs>） ── */
+.line  { fill: none; stroke: #141413; stroke-width: 4.5; }  /* 主消息，配 url(#head) */
+.faint { fill: none; stroke: #b6b6ae; stroke-width: 2.6; }  /* 次要消息，配 url(#head-faint) */
+.gray  { fill: none; stroke: #6c6c63; stroke-width: 4; }    /* 结构图里框与框之间的普通连线，配 url(#head-gray) */
+.fat   { fill: none; stroke: #c98e67; stroke-width: 16; }   /* 双栏大块之间的粗箭头，配 url(#head-fat) */
+.life  { fill: none; stroke: #6c6c6c; stroke-width: 2.2; stroke-dasharray: 6.5 8.5; }  /* 生命线 */
+.brace { fill: none; stroke: #141413; stroke-width: 3; }    /* 花括号、引线 */
+.dash  { stroke-dasharray: 10 8; }                          /* 修饰：虚线框、没发生的路径 */
+
+/* ── 箭头 ── */
+.head       { fill: #141413; }
+.head-faint { fill: #b6b6ae; }
+.head-gray  { fill: #6c6c63; }
+.head-fat   { fill: #c98e67; }

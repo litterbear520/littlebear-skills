@@ -1,0 +1,70 @@
+<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <!-- 范例：顶部步骤条 + 两个参与者 + 消息表（角色格 / 块类型格 / 内容格）。照《使用 Claude API 构建 · 发送工具结果》的配图 1:1 复刻后汉化 -->
+  <defs>
+    <marker id="head" viewBox="0 0 28 24" refX="0" refY="12" markerWidth="28" markerHeight="24" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="head" d="M0,0 L28,12 L0,24 Z"/></marker>
+  </defs>
+  <rect class="bg" width="1920" height="1080"/>
+
+  <!-- 步骤条：当前步深陶土，其余米黄、陶土交替；每格右边尖出 31，左边是上一格留下的凹口 -->
+  <path class="f-tan" d="M84,17.5 H425.5 L457.5,61 L425.5,104.5 H84 Q74,104.5 74,94.5 V27.5 Q74,17.5 84,17.5 Z"/>
+  <path class="f-clay" d="M425.5,17.5 H775.5 L806.5,61 L775.5,104.5 H425.5 L457.5,61 Z"/>
+  <path class="f-deep" d="M775.5,17.5 H1128.5 L1157,61 L1128.5,104.5 H775.5 L806.5,61 Z"/>
+  <path class="f-tan" d="M1128.5,17.5 H1460.5 L1491.5,61 L1460.5,104.5 H1128.5 L1157,61 Z"/>
+  <path class="f-clay" d="M1460.5,17.5 H1818.5 L1848,61 L1818.5,104.5 H1460.5 L1491.5,61 Z"/>
+  <text class="t-step" x="263" y="71.4" text-anchor="middle">编写工具函数</text>
+  <text class="t-step" x="616.5" y="71.4" text-anchor="middle">编写 JSON Schema</text>
+  <text class="t-step" x="965.5" y="53" text-anchor="middle">带着 Schema</text>
+  <text class="t-step" x="965.5" y="89" text-anchor="middle">调用 Claude</text>
+  <text class="t-step" x="1308" y="71.4" text-anchor="middle">运行工具</text>
+  <text class="t-step" x="1642" y="53" text-anchor="middle">附上工具结果</text>
+  <text class="t-step" x="1642" y="89" text-anchor="middle">再次调用 Claude</text>
+
+  <!-- 参与者与生命线 -->
+  <line class="life" x1="395.5" y1="233" x2="395.5" y2="937"/>
+  <line class="life" x1="1537" y1="233" x2="1537" y2="937"/>
+  <rect class="actor" x="244.5" y="159" width="289" height="72" rx="13"/>
+  <text class="t-name" x="389" y="209.8" text-anchor="middle">我们的服务器</text>
+  <rect class="actor" x="1388.5" y="159" width="288" height="72" rx="13"/>
+  <text class="t-name" x="1532.5" y="210.6" text-anchor="middle">Claude</text>
+
+  <!-- Claude 的回复：一条助手消息里两个块，表格底边压在箭头上 -->
+  <rect class="f-clay" x="517" y="254" width="172" height="110"/>
+  <rect class="f-cell" x="689" y="254" width="247" height="110"/>
+  <rect class="grid" x="517" y="254" width="923.5" height="110"/>
+  <path class="grid" d="M689,254 V364 M936,254 V364 M689,309 H1440.5"/>
+  <text class="t-cell-h" x="603" y="318.9" text-anchor="middle">助手消息</text>
+  <text class="t-cell-h" x="812.5" y="291.4" text-anchor="middle">文本块</text>
+  <text class="t-cell-h" x="812.5" y="346.4" text-anchor="middle">tool_use 块</text>
+  <text class="t-cell" x="1188" y="291.9" text-anchor="middle">好的，我来帮您查一下</text>
+  <text class="t-cell" x="1188" y="346.9" text-anchor="middle">~请求调用工具~</text>
+  <line class="line" x1="1537" y1="366.5" x2="425" y2="366.5" marker-end="url(#head)"/>
+
+  <!-- 每次请求都带上的工具 schema -->
+  <rect class="f-cell" x="612.5" y="468.5" width="175.5" height="89"/>
+  <rect class="grid" x="612.5" y="468.5" width="700.5" height="89"/>
+  <path class="grid" d="M788,468.5 V557.5"/>
+  <text class="t-cell-h" x="700" y="505.9" text-anchor="middle">工具</text>
+  <text class="t-cell-h" x="700" y="539.9" text-anchor="middle">Schema</text>
+  <text class="t-cell" x="1050.5" y="505.7" text-anchor="middle">帮助 Claude 理解</text>
+  <text class="t-cell" x="1050.5" y="541.2" text-anchor="middle">怎样调用我们的工具函数</text>
+
+  <!-- 第二次请求：整段历史画成一张表，同一条消息的几个块共用一个角色格 -->
+  <rect class="f-tan" x="517" y="571.5" width="172" height="94"/>
+  <rect class="f-clay" x="517" y="665.5" width="172" height="108"/>
+  <rect class="f-tan" x="517" y="773.5" width="172" height="83.5"/>
+  <rect class="f-cell" x="689" y="571.5" width="247" height="285.5"/>
+  <rect class="grid" x="517" y="571.5" width="923.5" height="285.5"/>
+  <path class="grid" d="M689,571.5 V857 M936,571.5 V857 M517,665.5 H1440.5 M689,719.5 H1440.5 M517,773.5 H1440.5"/>
+  <text class="t-cell-h" x="603" y="628.4" text-anchor="middle">用户消息</text>
+  <text class="t-cell-h" x="603" y="729.4" text-anchor="middle">助手消息</text>
+  <text class="t-cell-h" x="603" y="825.2" text-anchor="middle">用户消息</text>
+  <text class="t-cell-h" x="812.5" y="628.4" text-anchor="middle">文本块</text>
+  <text class="t-cell-h" x="812.5" y="702.4" text-anchor="middle">文本块</text>
+  <text class="t-cell-h" x="812.5" y="756.4" text-anchor="middle">tool_use 块</text>
+  <text class="t-cell-h" x="812.5" y="825.2" text-anchor="middle">tool_result 块</text>
+  <text class="t-cell" x="1188" y="628.9" text-anchor="middle">现在几点了？</text>
+  <text class="t-cell" x="1188" y="702.9" text-anchor="middle">好的，我来帮您查一下</text>
+  <text class="t-cell" x="1188" y="756.9" text-anchor="middle">~请求调用工具~</text>
+  <text class="t-cell" x="1188" y="825.7" text-anchor="middle">~函数调用的结果~</text>
+  <line class="line" x1="396" y1="858.5" x2="1508" y2="858.5" marker-end="url(#head)"/>
+</svg>
