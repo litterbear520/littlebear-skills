@@ -15,6 +15,7 @@ export const CJK_FONTS = process.env.CJK_FONTS_CSS ? path.resolve(process.env.CJ
 export const url = (p) => pathToFileURL(p).href;
 
 export function fontLinks() {
+  if (CJK_FONTS && !fs.existsSync(CJK_FONTS)) console.warn(`WARN  CJK_FONTS_CSS 指向的 ${CJK_FONTS} 不存在，图里的中文会用本机字体`);
   return [LATIN_FONTS, CJK_FONTS]
     .filter((p) => p && fs.existsSync(p))
     .map((p) => `<link rel="stylesheet" href="${url(p)}">`)

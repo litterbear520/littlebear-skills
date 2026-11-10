@@ -5,7 +5,7 @@
 // 检查有 ERROR 时退出码为 1，图照样产出，方便对着图改。
 import fs from 'node:fs';
 import path from 'node:path';
-import { STYLE, fontLinks, url, tmp, die, withChrome } from './lib.mjs';
+import { STYLE, CJK_FONTS, fontLinks, url, tmp, die, withChrome } from './lib.mjs';
 
 const argv = process.argv.slice(2);
 if (!argv.length || argv[0].startsWith('-')) {
@@ -82,7 +82,10 @@ const CHECK = `(async () => {
     }
     if (CJK.test(t.textContent)) {
       const cjk = fams.find((f) => /SC$/.test(f));
-      if (cjk) used.add(cjk); else warns.push(name(t) + ' 有中文，但字体列表里没有 Noto Serif SC / Noto Sans SC');
+      if (!cjk) warns.push(name(t) + ' 有中文，但字体列表里没有 Noto Serif SC / Noto Sans SC');
+      // 只有用 CJK_FONTS_CSS 自托管字体时才查有没有加载上：本机装的字体不会出现在 document.fonts 里
+      else if (${CJK_FONTS ? 'true' : 'false'} && !faces.some((f) => f.fam === cjk)) errors.push(name(t) + ' 有中文，但字体 ' + cjk + ' 没有加载（检查 CJK_FONTS_CSS 指向的样式表和字体文件）');
+      else used.add(cjk);
     }
     if (size < 24) warns.push(name(t) + ' 字号 ' + size + 'px：在 1920 宽画布上小于 24，放进正文后太小');
     if (t.hasAttribute('data-upright')) infos.push(name(t) + ' 含中文，已改成正体');
