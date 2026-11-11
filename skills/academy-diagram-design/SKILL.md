@@ -1,6 +1,6 @@
 ---
 name: academy-diagram-design
-description: 画 Academy 课件风的配图，和 academy.claude.com 上 MCP、Claude API 课的幻灯片配图同一个样子：Lora 衬线字、米黄和陶土色块、粗黑箭头、压在箭头上的消息标签、消息表、底部结论条；出 SVG 源文件和 WebP 放进文档。用户点名要这种风格（“像 Academy / 像 MCP 课那样”“用 academy 图表设计”），或要把 Academy 原图重画成中文、一比一复刻时用；用户没点名的普通配图不要默认用这个。
+description: 画 Academy 课件风配图（MCP、Claude API 课的幻灯片样式），出 SVG 源文件和 WebP。用于用户点名这种风格（“像 Academy / 像 MCP 课那样”），或要把 Academy 原图一比一复刻、重画成中文。给笔记、课文配图时用哪个配图技能由用户当次指定，没点名就先问。
 argument-hint: "[要画什么，或要复刻的原图路径]"
 ---
 
